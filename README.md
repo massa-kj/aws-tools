@@ -1,6 +1,6 @@
 # AWS Utilities
 
-Scripts and cheat sheets for AWS work.
+Scripts and cheat sheets for my AWS work.
 A unified command-line interface for managing multiple AWS services with a clean, modular architecture.
 
 ## Features
