@@ -72,22 +72,23 @@ A unified command-line interface for managing multiple AWS services with a clean
 aws-utilities/
 ├── awstools.sh               # Main entry point
 ├── config/                   # Configuration files
+│   ├── aws-exec.env          # AWS execution environment settings
 │   ├── default/              # Default configuration files
 │   └── overwrite/            # Local override configuration files
 ├── commands/                 # Global commands
-│   ├── manifest.sh           # Command registry
-│   └── {command}.sh          # Individual command scripts
+│   └── {command}.sh          # Individual command scripts (help, version, detect-auth)
 ├── common/                   # Shared utilities
 │   ├── config-loader.sh      # Configuration loader
+│   ├── discovery.sh          # Service and command discovery utilities
 │   ├── logger.sh             # Logging system
-│   └── utils.sh              # Common functions
+│   └── utils.sh              # AWS execution and common functions
 └── services/                 # Service implementations
-    └── {service}/            # Individual service (e.g., ec2, quicksight)
+    └── {service}/            # Individual service (e.g., ec2, quicksight, auth)
         ├── manifest.sh       # Service metadata
         ├── lib.sh            # Service utilities
         ├── api.sh            # AWS API wrappers
         ├── ui.sh             # Command interface
-        └── ...               # 
+        └── ...               # Additional service files
 ```
 
 ### Configuration Management
@@ -130,7 +131,7 @@ Configuration values are determined by the following priority order (higher prio
 1. **CLI Options** - Runtime specification (highest priority)
    - `--profile`, `--region`, `--config`, `--auth`
    - Dynamic configuration via `--set KEY=VALUE`
-2. **Environment Variables** - Shell environment settings
+2. **Environment Variables** - Shell environment settings (TODO: Not supported yet)
    - `AWS_PROFILE`, `AWS_REGION`, etc.
 3. **Local Override Settings** - User-specific configuration
    - `config/overwrite/services/{service}.env`
@@ -260,6 +261,16 @@ Each service follows a 3-layer architecture:
 | **API Layer** | `api.sh` | AWS CLI wrappers, API calls, response processing |
 | **Lib Layer** | `lib.sh` | Service-specific utilities, validation, and configuration management |
 
+### Common Utilities
+The `common/` directory provides shared functionality across all services:
+
+| File | Purpose |
+|------|---------|
+| `discovery.sh` | Service and global command discovery, registry management |
+| `config-loader.sh` | Hierarchical configuration loading with priority handling |
+| `utils.sh` | AWS CLI execution wrapper with retry logic and error handling |
+| `logger.sh` | Structured logging with color support and debug levels |
+
 ## Available Services
 
 ### EC2 Service
@@ -291,29 +302,6 @@ Manage QuickSight resources including analyses and datasets.
 # iam-role              # Using IAM role (EC2, Lambda, etc.)
 ```
 
-## Configuration
-
-### Environment Variables
-```bash
-# AWS Configuration
-export AWS_PROFILE=my-profile
-export AWS_REGION=us-east-1
-
-# Logging Configuration
-export LOG_LEVEL=debug          # debug, info, warn, error
-export LOG_FILE=./aws-tools.log # Optional file output
-export LOG_COLOR=false          # Disable colors
-```
-
-### Local Configuration
-Create `.env.local` in the project root for user-specific settings:
-```bash
-# .env.local
-AWS_PROFILE=my-default-profile
-AWS_REGION=ap-northeast-1
-DEBUG_AWSTOOLS=true
-```
-
 ## Development
 
 ### Adding a New Service
@@ -343,22 +331,39 @@ DEBUG_AWSTOOLS=true
 
 ### Adding a Global Command
 
-1. **Add to manifest**:
+1. **Register in discovery.sh**:
    ```bash
-   # commands/manifest.sh
+   # common/discovery.sh - Add to GLOBAL_COMMANDS array
    ["my-command"]="Description of my command"
    ```
 
 2. **Create command script**:
+   commands/my-command.sh  
    ```bash
-   # commands/my-command.sh
    #!/usr/bin/env bash
+   #=============================================================
+   # my-command.sh - My custom command
+   #=============================================================
+   
+   set -euo pipefail
+   
+   # Load common utilities
+   BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+   source "${BASE_DIR}/common/logger.sh"
+   source "${BASE_DIR}/common/discovery.sh"  # If needed
+   
    # Implementation here
+   echo "My custom command executed"
    ```
 
 3. **Make executable**:
    ```bash
    chmod +x commands/my-command.sh
+   ```
+
+4. **Test the command**:
+   ```bash
+   ./awstools.sh my-command
    ```
 
 ## License

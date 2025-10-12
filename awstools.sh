@@ -18,19 +18,6 @@ COMMON_DIR="${BASE_DIR}/common"
 SERVICES_DIR="${BASE_DIR}/services"
 COMMANDS_DIR="${BASE_DIR}/commands"
 source "${COMMON_DIR}/logger.sh"
-source "${COMMANDS_DIR}/manifest.sh"
-
-#--- Discover available services dynamically -----------------
-discover_services() {
-  for dir in "${SERVICES_DIR}"/*/; do
-    [[ -d "$dir" ]] || continue
-    if [ -f "${dir}/manifest.sh" ]; then
-      source "${dir}/manifest.sh"
-      printf "  - %-20s %s (v%s)\n" "$SERVICE_NAME" "$SERVICE_DESC" "$SERVICE_VERSION"
-    fi
-  done
-}
-
 #--- Help display --------------------------------------------
 show_help() {
   cat <<EOF
@@ -59,6 +46,7 @@ Examples:
 EOF
 }
 
+source "${COMMON_DIR}/discovery.sh"
 
 #--- Execute global command function ------------------------
 execute_global_command() {
