@@ -60,7 +60,7 @@ parse_options() {
 #--- Command Implementation -----------------------------------
 
 cmd_sso_login() {
-  local profile_name="${1:-}"
+  local profile_name="${1:-$AWS_PROFILE}"
   
   if [[ -z "$profile_name" ]]; then
     log_error "Usage: awstools auth login-sso <profile-name>"

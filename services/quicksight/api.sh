@@ -10,7 +10,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 get_all_datasets() {
   local all_datasets
-  all_datasets=$(aws quicksight list-data-sets --aws-account-id "$ACCOUNT_ID" --output json 2>/dev/null)
+  all_datasets=$(aws_exec quicksight list-data-sets --aws-account-id "$ACCOUNT_ID" --output json 2>/dev/null)
 
   if [ $? -ne 0 ] || [ "$all_datasets" = "null" ]; then
     log_error "Error: Failed to retrieve datasets."

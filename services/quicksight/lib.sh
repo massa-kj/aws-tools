@@ -124,10 +124,10 @@ export_analyses() {
         
         # Get analysis basic information
         local analysis_detail
-        if analysis_detail=$(aws quicksight describe-analysis \
+        if analysis_detail=$(aws_exec quicksight describe-analysis \
             --aws-account-id "$ACCOUNT_ID" \
             --analysis-id "$analysis_id" \
-            --region "$REGION" \
+            --region "$AWS_REGION" \
             --output json 2>/dev/null); then
             
             echo "$analysis_detail" > "$export_dir/analyses/${safe_filename}-${analysis_id}.json"
@@ -141,10 +141,10 @@ export_analyses() {
         
         # Get analysis definition
         local analysis_definition sheet_count=0 visual_count=0
-        if analysis_definition=$(aws quicksight describe-analysis-definition \
+        if analysis_definition=$(aws_exec quicksight describe-analysis-definition \
             --aws-account-id "$ACCOUNT_ID" \
             --analysis-id "$analysis_id" \
-            --region "$REGION" \
+            --region "$AWS_REGION" \
             --output json 2>/dev/null); then
             
             echo "$analysis_definition" > "$export_dir/definitions/${safe_filename}-${analysis_id}-definition.json"
@@ -158,10 +158,10 @@ export_analyses() {
         fi
         
         # Get permission information
-        if aws quicksight describe-analysis-permissions \
+        if aws_exec quicksight describe-analysis-permissions \
             --aws-account-id "$ACCOUNT_ID" \
             --analysis-id "$analysis_id" \
-            --region "$REGION" \
+            --region "$AWS_REGION" \
             --output json > "$export_dir/permissions/${safe_filename}-${analysis_id}-permissions.json" 2>/dev/null; then
             
             log_info "    ✓ Permission information saved"
@@ -207,10 +207,10 @@ export_datasets() {
         
         # Get dataset detailed information
         local dataset_detail
-        if dataset_detail=$(aws quicksight describe-data-set \
+        if dataset_detail=$(aws_exec quicksight describe-data-set \
             --aws-account-id "$ACCOUNT_ID" \
             --data-set-id "$dataset_id" \
-            --region "$REGION" \
+            --region "$AWS_REGION" \
             --output json 2>/dev/null); then
             
             echo "$dataset_detail" > "$export_dir/datasets/${safe_filename}-${dataset_id}.json"
@@ -223,10 +223,10 @@ export_datasets() {
         fi
         
         # Get permission information
-        if aws quicksight describe-data-set-permissions \
+        if aws_exec quicksight describe-data-set-permissions \
             --aws-account-id "$ACCOUNT_ID" \
             --data-set-id "$dataset_id" \
-            --region "$REGION" \
+            --region "$AWS_REGION" \
             --output json > "$export_dir/permissions/${safe_filename}-${dataset_id}-permissions.json" 2>/dev/null; then
             
             log_info "    ✓ Permission information saved"
