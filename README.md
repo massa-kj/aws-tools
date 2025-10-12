@@ -15,11 +15,9 @@ A unified command-line interface for managing multiple AWS services with a clean
   - [Configuration Management](#configuration-management)
   - [Layer Architecture](#layer-architecture)
   - [Common Utilities](#common-utilities)
-- [Available Services](#available-services)
-  - [EC2 Service](#ec2-service)
-  - [QuickSight Service](#quicksight-service)
-- [Global Commands](#global-commands)
-  - [Authentication Detection](#authentication-detection)
+- [Available Services & Global Commands](#available-services--global-commands)
+  - [Services](#services)
+  - [Global Commands](#global-commands)
 - [Development](#development)
   - [Adding a New Service](#adding-a-new-service)
   - [Adding a Global Command](#adding-a-global-command)
@@ -294,36 +292,21 @@ The `common/` directory provides shared functionality across all services:
 | `utils.sh` | AWS CLI execution wrapper with retry logic and error handling |
 | `logger.sh` | Structured logging with color support and debug levels |
 
-## Available Services
+## Available Services & Global Commands
 
-### EC2 Service
-Manage EC2 instances with enhanced state checking and validation.
+### Services
 
-```bash
-./awstools.sh ec2 list                    # List all instances
-./awstools.sh ec2 start <instance-id>     # Start instance with state validation
-./awstools.sh ec2 stop <instance-id>      # Stop instance with confirmation
-./awstools.sh ec2 describe <instance-id>  # Show detailed instance info
-```
+- [Auth](services/auth/README.md)
+- [EC2](services/ec2/README.md)
+- [QuickSight](services/quicksight/README.md)
 
-### QuickSight Service
-Manage QuickSight resources including analyses and datasets.
+### Global Commands
 
-```bash
-./awstools.sh quicksight list             # List resources
-./awstools.sh quicksight backup           # Backup operations
-```
-
-## Global Commands
-
-### Authentication Detection
-```bash
-./awstools.sh detect-auth
-# Output examples:
-# profile:my-profile    # Using AWS CLI profile
-# env-vars              # Using environment variables
-# iam-role              # Using IAM role (EC2, Lambda, etc.)
-```
+| Command | Description |
+|---------|-------------|
+| version | Show version information |
+| help | Show help information |
+| detect-auth | Detect current AWS authentication method |
 
 ## Development
 
