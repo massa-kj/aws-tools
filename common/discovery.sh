@@ -13,6 +13,7 @@ DISCOVERY_COMMANDS_DIR="${DISCOVERY_BASE_DIR}/commands"
 # Define available global commands
 declare -A GLOBAL_COMMANDS=(
   ["version"]="Show version information"
+  ["help"]="Show help information"
   ["detect-auth"]="Detect authentication source (profile, env-vars, iam-role)"
   # Add more global commands here as needed
   # ["config"]="Manage global configuration"
