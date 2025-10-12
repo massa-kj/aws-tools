@@ -1,7 +1,30 @@
-# AWS Utilities
+# AWS Tools
 
 Scripts and cheat sheets for my AWS work.
 A unified command-line interface for managing multiple AWS services with a clean, modular architecture.
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+  - [Basic Usage](#basic-usage)
+  - [Common Operations](#common-operations)
+- [Architecture](#architecture)
+  - [Project Structure](#project-structure)
+  - [Configuration Management](#configuration-management)
+  - [Layer Architecture](#layer-architecture)
+  - [Common Utilities](#common-utilities)
+- [Available Services](#available-services)
+  - [EC2 Service](#ec2-service)
+  - [QuickSight Service](#quicksight-service)
+- [Global Commands](#global-commands)
+  - [Authentication Detection](#authentication-detection)
+- [Development](#development)
+  - [Adding a New Service](#adding-a-new-service)
+  - [Adding a Global Command](#adding-a-global-command)
+- [License](#license)
+- [Related](#related)
 
 ## Features
 
@@ -17,8 +40,8 @@ A unified command-line interface for managing multiple AWS services with a clean
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/massa-kj/aws-utilities.git
-   cd aws-utilities
+   git clone https://github.com/massa-kj/aws-tools.git
+   cd aws-tools
    ```
 
 2. Make the main script executable:
@@ -69,7 +92,7 @@ A unified command-line interface for managing multiple AWS services with a clean
 
 ### Project Structure
 ```
-aws-utilities/
+aws-tools/
 ├── awstools.sh               # Main entry point
 ├── config/                   # Configuration files
 │   ├── aws-exec.env          # AWS execution environment settings
