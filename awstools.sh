@@ -59,16 +59,6 @@ Examples:
 EOF
 }
 
-#--- Detect authentication source ---------------------------
-detect_auth_source() {
-  if [ -n "${AWS_PROFILE:-}" ]; then
-    echo "profile:${AWS_PROFILE}"
-  elif [ -n "${AWS_ACCESS_KEY_ID:-}" ]; then
-    echo "env-vars"
-  else
-    echo "iam-role"
-  fi
-}
 
 #--- Execute global command function ------------------------
 execute_global_command() {
