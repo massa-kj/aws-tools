@@ -14,9 +14,9 @@ show_version() {
 AWS Tools v1.0.0
 
 For help and available commands:
-  awstools --help
-  awstools <command> --help
-  awstools <service> --help
+  awstools help
+  awstools <command> help
+  awstools <service> help
 EOF
 }
 

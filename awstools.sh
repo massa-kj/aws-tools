@@ -90,6 +90,8 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     help|--help|-h)
       show_help; exit 0 ;;
+    --version|-v)
+      execute_global_command "version" "$@"; exit 0 ;;
     --debug)
       export LOG_LEVEL="debug"; shift ;;
     --no-color)
