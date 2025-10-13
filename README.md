@@ -122,7 +122,7 @@ aws-tools/
 
 ### Configuration Management
 
-#### User Profile Configuration (NEW)
+#### User Profile Configuration
 
 AWS Tools now supports user-specific profile configurations stored outside the repository:
 
