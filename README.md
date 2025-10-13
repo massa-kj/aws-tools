@@ -104,7 +104,7 @@ aws-tools/
 │   ├── logger.sh             # Logging system
 │   └── utils.sh              # AWS execution and common functions
 └── services/                 # Service implementations
-    └── {service}/            # Individual service (e.g., ec2, quicksight, auth)
+    └── {service}/            # Individual service (e.g., ec2, quicksight, auth...)
         ├── manifest.sh       # Service metadata
         ├── lib.sh            # Service utilities
         ├── api.sh            # AWS API wrappers
@@ -298,6 +298,7 @@ The `common/` directory provides shared functionality across all services:
 
 - [Auth](services/auth/README.md)
 - [EC2](services/ec2/README.md)
+- [RDS](services/rds/README.md)
 - [QuickSight](services/quicksight/README.md)
 
 ### Global Commands
