@@ -8,7 +8,7 @@
 # source "$(dirname "$0")/logger.sh"
 # 
 # # --- File output path (empty to disable file output) ---
-# LOG_FILE="./example.log"
+# AWSTOOLS_LOG_FILE="./example.log"
 # 
 # # --- Basic output ---
 # log_debug "This is debug info"
@@ -24,11 +24,11 @@
 # ============================================================
 
 # ======= Configuration ======================================
-LOG_LEVEL="${LOG_LEVEL:-INFO}"             # Output level
-LOG_FILE="${LOG_FILE:-}"                   # File output path (empty to disable)
-LOG_USE_STDERR="${LOG_USE_STDERR:-true}"   # Whether to use stderr
-LOG_USE_STDOUT="${LOG_USE_STDOUT:-false}"  # Whether to use stdout (false for silent)
-LOG_USE_COLOR="${LOG_USE_COLOR:-true}"     # Whether to use colors
+AWSTOOLS_LOG_LEVEL="${AWSTOOLS_LOG_LEVEL:-INFO}"             # Output level
+AWSTOOLS_LOG_FILE="${AWSTOOLS_LOG_FILE:-}"                   # File output path (empty to disable)
+AWSTOOLS_LOG_USE_STDERR="${AWSTOOLS_LOG_USE_STDERR:-true}"   # Whether to use stderr
+AWSTOOLS_LOG_USE_STDOUT="${AWSTOOLS_LOG_USE_STDOUT:-false}"  # Whether to use stdout (false for silent)
+AWSTOOLS_LOG_USE_COLOR="${AWSTOOLS_LOG_USE_COLOR:-true}"     # Whether to use colors
 
 # ======= Color definitions ==================================
 COLOR_RESET="\033[0m"
@@ -70,7 +70,7 @@ log() {
   msg="$*"
 
   # Level filter (normalize to uppercase)
-  local normalized_log_level="${LOG_LEVEL^^}"
+  local normalized_log_level="${AWSTOOLS_LOG_LEVEL^^}"
   if [[ ${LOG_LEVELS[$level]} -lt ${LOG_LEVELS[$normalized_log_level]} ]]; then
     return
   fi
@@ -79,20 +79,20 @@ log() {
   ts=$(date '+%Y-%m-%d %H:%M:%S')
   caller="${BASH_SOURCE[2]##*/}:${BASH_LINENO[1]}"
   color=""
-  [[ "$LOG_USE_COLOR" == "true" ]] && color="${override_color:-${LEVEL_COLORS[$level]}}"
+  [[ "$AWSTOOLS_LOG_USE_COLOR" == "true" ]] && color="${override_color:-${LEVEL_COLORS[$level]}}"
 
   formatted="[$ts][$level][$caller] $msg"
   output="${color}${formatted}${COLOR_RESET}"
 
   # File output
-  if [[ -n "$LOG_FILE" ]]; then
-    printf "%s\n" "$formatted" >> "$LOG_FILE"
+  if [[ -n "$AWSTOOLS_LOG_FILE" ]]; then
+    printf "%s\n" "$formatted" >> "$AWSTOOLS_LOG_FILE"
   fi
 
   # Standard output/error output control
-  if [[ "$LOG_USE_STDERR" == "true" ]]; then
+  if [[ "$AWSTOOLS_LOG_USE_STDERR" == "true" ]]; then
     printf "%b\n" "$output" >&2
-  elif [[ "$LOG_USE_STDOUT" == "true" ]]; then
+  elif [[ "$AWSTOOLS_LOG_USE_STDOUT" == "true" ]]; then
     printf "%b\n" "$output"
   fi
 }
@@ -103,6 +103,5 @@ log_info()  { log INFO  "$@"; }
 log_warn()  { log WARN  "$@"; }
 log_error() { log ERROR "$@"; }
 
-# ======= Export settings and functions ======================
+# ======= Export functions ===================================
 export -f log log_debug log_info log_warn log_error
-export LOG_LEVEL LOG_FILE LOG_USE_STDERR LOG_USE_STDOUT LOG_USE_COLOR
