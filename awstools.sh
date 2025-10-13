@@ -4,10 +4,7 @@
 #
 # Usage:
 #   ./awstools.sh <service> <command> [options...]
-#
-# Example:
-#   ./awstools.sh ec2 list
-#   ./awstools.sh quicksight export --analysis-id abc123
+#   ./awstools.sh <command> [options...]
 #=============================================================
 
 set -euo pipefail
@@ -36,12 +33,24 @@ execute_global_command() {
 }
 
 #--- Option parsing (pre-processing) -------------------------
+# Initialize profile variable
+AWSTOOLS_PROFILE_OVERRIDE=""
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --version|-v)
       execute_global_command "version" "$@"; exit 0 ;;
     --help|-h)
       execute_global_command "help" "$@"; exit 0 ;;
+    --profile)
+      shift
+      if [[ $# -eq 0 ]] || [[ "$1" == --* ]]; then
+        log_error "Option --profile requires a value"
+        exit 1
+      fi
+      AWSTOOLS_PROFILE_OVERRIDE="$1"
+      shift
+      ;;
     *)
       # Check if it's a global command
       if is_global_command "$1"; then
@@ -50,6 +59,11 @@ while [[ $# -gt 0 ]]; do
       break ;;
   esac
 done
+
+# Export profile override for child processes
+if [[ -n "$AWSTOOLS_PROFILE_OVERRIDE" ]]; then
+  export AWSTOOLS_PROFILE_OVERRIDE
+fi
 
 #--- Argument check -----------------------------------------
 if [ $# -lt 1 ]; then

@@ -82,6 +82,13 @@ A unified command-line interface for managing multiple AWS services with a clean
 ./awstools.sh quicksight list
 ./awstools.sh quicksight backup --analysis-id abc123
 
+# Profile Management (NEW)
+# Initialize user configuration
+./scripts/init-user-config.sh
+
+# Use profile override at runtime
+./awstools.sh --profile production ec2 list
+
 # Profile and Region Override
 ./awstools.sh ec2 list --profile production --region us-west-2
 ```
@@ -94,8 +101,9 @@ aws-tools/
 ├── awstools.sh               # Main entry point
 ├── config/                   # Configuration files
 │   ├── aws-exec.env          # AWS execution environment settings
-│   ├── default/              # Default configuration files
-│   └── overwrite/            # Local override configuration files
+│   └── default/              # Default configuration files
+├── scripts/                  # Scripts
+│   └── init-user-config.sh   # Initialize user configuration
 ├── commands/                 # Global commands
 │   └── {command}.sh          # Individual command scripts (help, version, detect-auth)
 ├── common/                   # Shared utilities
@@ -114,36 +122,69 @@ aws-tools/
 
 ### Configuration Management
 
-#### Configuration File Structure
-```
-config/
-├── aws-exec.env              # AWS execution environment settings
-├── default/                  # Default configuration
-│   ├── common.env           # Common settings
-│   ├── environments/        # Environment-specific settings
-│   │   ├── default.env     # Development environment settings
-│   │   └── prod.env        # Production environment settings
-│   └── services/           # Service-specific settings
-│       ├── auth.env        # Authentication service settings
-│       ├── ec2.env         # EC2 service settings
-│       └── quicksight.env  # QuickSight service settings
-└── overwrite/              # Local override configuration
-    ├── common.env          # Common settings overrides
-    ├── environments/       # Environment settings overrides
-    └── services/          # Service settings overrides
-```
+#### User Profile Configuration (NEW)
 
-#### Configuration Loading
-Each script loads configuration hierarchically through `config-loader.sh`:
+AWS Tools now supports user-specific profile configurations stored outside the repository:
+
+##### Initial Setup
 ```bash
-# Basic usage
-load_config <environment> [service]
+# Initialize user configuration
+./scripts/init-user-config.sh
 
-# Validate configuration
-validate_config <environment> [service]
+# This creates:
+# ~/.config/awstools/config - User configuration file
+```
 
-# Show effective configuration
-show_effective_config [environment] [service]
+##### User Configuration File Structure
+```bash
+# ~/.config/awstools/config
+AWSTOOLS_PROFILE="default"                    # Default profile to use
+AWSTOOLS_PROFILE_DIR="/path/to/profiles"      # Directory containing profile configurations
+```
+
+##### Profile Directory Structure
+```
+/path/to/profiles/
+├── dev/                          # Development profile
+│   ├── common.env               # Common development settings
+│   ├── services/
+│   │   ├── ec2.env             # EC2-specific dev settings
+│   │   └── rds.env             # RDS-specific dev settings
+│   └── custom.env              # Any additional .env files
+├── staging/                     # Staging profile
+│   ├── common.env
+│   └── services/
+│       └── ec2.env
+└── prod/                        # Production profile
+    ├── common.env
+    ├── security.env            # Security-specific settings
+    └── services/
+        ├── ec2.env
+        └── quicksight.env
+```
+
+##### Profile Loading Behavior
+1. **Default Configuration**: Always loaded first as fallback (`config/default/`)
+2. **Repository Overrides**: Loaded second (`config/overwrite/`)
+3. **User Profile**: Loaded last with highest priority
+   - All `.env` files in the profile directory are loaded recursively
+   - Files are loaded in alphabetical order for consistency
+
+##### Profile Selection Priority
+1. **Command Line**: `--profile` option (highest priority)
+2. **User Config**: `AWSTOOLS_PROFILE` in `~/.config/awstools/config`
+3. **Fallback**: `"default"` profile
+
+##### Usage Examples
+```bash
+# Use default profile from user config
+./awstools.sh ec2 list
+
+# Override profile at runtime
+./awstools.sh --profile prod ec2 list
+
+# Initialize user configuration
+./scripts/init-user-config.sh
 ```
 
 #### Configuration Priority
@@ -155,9 +196,6 @@ Configuration values are determined by the following priority order (higher prio
 2. **Environment Variables** - Shell environment settings (TODO: Not supported yet)
    - `AWS_PROFILE`, `AWS_REGION`, etc.
 3. **Local Override Settings** - User-specific configuration
-   - `config/overwrite/services/{service}.env`
-   - `config/overwrite/environments/{environment}.env`
-   - `config/overwrite/common.env`
 4. **Default Settings** - Project standard configuration
    - `config/default/services/{service}.env`
    - `config/default/environments/{environment}.env`
