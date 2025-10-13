@@ -41,7 +41,7 @@ filter_target_analyses() {
     local matched_analyses=()
     local analysis_ids=()
     
-    for target_name in "${TARGET_ANALYSES[@]}"; do
+    for target_name in "${AWSTOOLS_QS_TARGET_ANALYSES[@]}"; do
         local matched_info
         matched_info=$(echo "$all_analyses" | jq -r --arg name "$target_name" \
             '.AnalysisSummaryList[] | select(.Name == $name) | "\(.Name)|\(.AnalysisId)|\(.CreatedTime // "N/A")|\(.LastUpdatedTime // "N/A")|\(.Status // "N/A")"')
@@ -73,7 +73,7 @@ filter_target_datasets() {
     local matched_datasets=()
     local dataset_ids=()
     
-    for target_name in "${TARGET_DATASETS[@]}"; do
+    for target_name in "${AWSTOOLS_QS_TARGET_DATASETS[@]}"; do
         local matched_info
         matched_info=$(echo "$all_datasets" | jq -r --arg name "$target_name" \
             '.DataSetSummaries[] | select(.Name == $name) | "\(.Name)|\(.DataSetId)|\(.CreatedTime // "N/A")|\(.LastUpdatedTime // "N/A")|\(.ImportMode // "N/A")"')
