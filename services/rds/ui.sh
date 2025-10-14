@@ -101,7 +101,7 @@ cmd_start() {
   
   # Wait for it to be available
   log_info "Waiting for DB instance to be available (this may take several minutes)..."
-  rds_wait_for_instance_status "$db_instance_id" "available" 900  # 15 minutes
+  rds_wait_for_instance_status "$db_instance_id" "available" "${AWSTOOLS_RDS_START_WAIT_TIMEOUT}"
 }
 
 cmd_stop() {
@@ -136,7 +136,7 @@ cmd_stop() {
   
   # Wait for it to be stopped
   log_info "Waiting for DB instance to stop (this may take several minutes)..."
-  rds_wait_for_instance_status "$db_instance_id" "stopped" 900  # 15 minutes
+  rds_wait_for_instance_status "$db_instance_id" "stopped" "${AWSTOOLS_RDS_STOP_WAIT_TIMEOUT}"
 }
 
 cmd_describe() {
