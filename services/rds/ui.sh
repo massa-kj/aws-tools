@@ -68,13 +68,13 @@ parse_options() {
 
 #--- Command Implementation -----------------------------------
 
-list() {
+cmd_list() {
   log_info "Listing RDS instances in region '${AWS_REGION}' (profile=${AWS_PROFILE})..."
   ensure_aws_ready
   rds_list_instances
 }
 
-start() {
+cmd_start() {
   local db_instance_id="${1:-}"
   if [ -z "$db_instance_id" ]; then
     log_error "Usage: awstools rds start <db-instance-identifier>"
@@ -104,7 +104,7 @@ start() {
   rds_wait_for_instance_status "$db_instance_id" "available" 900  # 15 minutes
 }
 
-stop() {
+cmd_stop() {
   local db_instance_id="${1:-}"
   if [ -z "$db_instance_id" ]; then
     log_error "Usage: awstools rds stop <db-instance-identifier>"
@@ -139,7 +139,7 @@ stop() {
   rds_wait_for_instance_status "$db_instance_id" "stopped" 900  # 15 minutes
 }
 
-describe() {
+cmd_describe() {
   local db_instance_id="${1:-}"
   if [ -z "$db_instance_id" ]; then
     log_error "Usage: awstools rds describe <db-instance-identifier>"
@@ -168,16 +168,16 @@ shift || true
 # Execute command
 case "$COMMAND" in
   list)
-    list "$@"
+    cmd_list "$@"
     ;;
   start)
-    start "$@"
+    cmd_start "$@"
     ;;
   stop)
-    stop "$@"
+    cmd_stop "$@"
     ;;
   describe)
-    describe "$@"
+    cmd_describe "$@"
     ;;
   help|--help|-h)
     show_help

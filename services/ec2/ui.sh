@@ -67,13 +67,13 @@ parse_options() {
 
 #--- Command Implementation -----------------------------------
 
-list() {
+cmd_list() {
   log_info "Listing EC2 instances in region '${AWS_REGION}' (profile=${AWS_PROFILE})..."
   ensure_aws_ready
   ec2_list_instances
 }
 
-start() {
+cmd_start() {
   local instance_id="${1:-}"
   if [ -z "$instance_id" ]; then
     log_error "Usage: awstools ec2 start <instance-id>"
@@ -103,7 +103,7 @@ start() {
   ec2_wait_for_instance_state "$instance_id" "running" 180
 }
 
-stop() {
+cmd_stop() {
   local instance_id="${1:-}"
   if [ -z "$instance_id" ]; then
     log_error "Usage: awstools ec2 stop <instance-id>"
@@ -138,7 +138,7 @@ stop() {
   ec2_wait_for_instance_state "$instance_id" "stopped" 180
 }
 
-describe() {
+cmd_describe() {
   local instance_id="${1:-}"
   if [ -z "$instance_id" ]; then
     log_error "Usage: awstools ec2 describe <instance-id>"
@@ -167,16 +167,16 @@ shift || true
 # Execute command
 case "$COMMAND" in
   list)
-    list "$@"
+    cmd_list "$@"
     ;;
   start)
-    start "$@"
+    cmd_start "$@"
     ;;
   stop)
-    stop "$@"
+    cmd_stop "$@"
     ;;
   describe)
-    describe "$@"
+    cmd_describe "$@"
     ;;
   help|--help|-h)
     show_help
