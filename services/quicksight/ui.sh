@@ -65,17 +65,61 @@ parse_options() {
 }
 
 #--- Command Implementation -----------------------------------
-list_datasets() {
-  log_info "Listing QuickSight datasets in region ${AWS_REGION:-default}"
-  get_all_datasets
+cmd_list_target_analyses() {
+  log_info "=== Target Analyses List ==="
+
+  local all_analyses
+  if ! all_analyses=$(get_all_analyses); then
+    exit 1
+  fi
+
+  if ! filter_target_analyses "$all_analyses"; then
+    exit 1
+  fi
+
+  log_info "Target analyses count: ${#MATCHED_ANALYSES[@]}"
+  echo
+
+  for analysis_info in "${MATCHED_ANALYSES[@]}"; do
+    IFS='|' read -r analysis_name analysis_id created_time updated_time status <<< "$analysis_info"
+    
+    echo "Name: $analysis_name"
+    echo "ID: $analysis_id"
+    echo "Status: $status"
+    echo "Created: $created_time"
+    echo "Updated: $updated_time"
+    echo "---"
+  done
 }
 
-list_analyses() {
-  log_info "Listing QuickSight datasets in region ${AWS_REGION:-default}"
-  get_all_analyses
+cmd_list_target_datasets() {
+  log_info "=== Target Datasets List ==="
+
+  local all_datasets
+  if ! all_datasets=$(get_all_datasets); then
+    exit 1
+  fi
+  
+  if ! filter_target_datasets "$all_datasets"; then
+    exit 1
+  fi
+
+  log_info "Target datasets count: ${#MATCHED_DATASETS[@]}"
+  echo
+
+  for dataset_info in "${MATCHED_DATASETS[@]}"; do
+    IFS='|' read -r dataset_name dataset_id created_time updated_time import_mode <<< "$dataset_info"
+
+    echo "Name: $dataset_name"
+    echo "ID: $dataset_id"
+    echo "Import mode: $import_mode"
+    echo "Created: $created_time"
+    echo "Updated: $updated_time"
+    echo "---"
+  done
 }
 
-export_analyses() {
+cmd_export_analyses() {
   log_info "=== QuickSight Analysis Export ==="
 
   log_info "1. Retrieving all analyses list..."
@@ -112,7 +156,7 @@ export_analyses() {
   fi
 }
 
-export_datasets() {
+cmd_export_datasets() {
   log_info "=== QuickSight Dataset Export ==="
 
   log_info "1. Retrieving all datasets list..."
@@ -149,7 +193,7 @@ export_datasets() {
   fi
 }
 
-export_all() {
+cmd_export_all() {
   local base_export_dir
   base_export_dir="quicksight-full-export-$(date +%Y%m%d-%H%M%S)"
   mkdir -p "$base_export_dir"
@@ -194,62 +238,6 @@ export_all() {
   fi
 }
 
-# List target analyses
-cmd_list_analysis() {
-  log_info "=== Target Analyses List ==="
-
-  local all_analyses
-  if ! all_analyses=$(get_all_analyses); then
-    exit 1
-  fi
-
-  if ! filter_target_analyses "$all_analyses"; then
-    exit 1
-  fi
-
-  log_info "Target analyses count: ${#MATCHED_ANALYSES[@]}"
-  echo
-
-  for analysis_info in "${MATCHED_ANALYSES[@]}"; do
-    IFS='|' read -r analysis_name analysis_id created_time updated_time status <<< "$analysis_info"
-    
-    echo "Name: $analysis_name"
-    echo "ID: $analysis_id"
-    echo "Status: $status"
-    echo "Created: $created_time"
-    echo "Updated: $updated_time"
-    echo "---"
-  done
-}
-
-# List target datasets
-cmd_list_dataset() {
-  log_info "=== Target Datasets List ==="
-
-  local all_datasets
-  if ! all_datasets=$(get_all_datasets); then
-    exit 1
-  fi
-  
-  if ! filter_target_datasets "$all_datasets"; then
-    exit 1
-  fi
-
-  log_info "Target datasets count: ${#MATCHED_DATASETS[@]}"
-  echo
-
-  for dataset_info in "${MATCHED_DATASETS[@]}"; do
-    IFS='|' read -r dataset_name dataset_id created_time updated_time import_mode <<< "$dataset_info"
-
-    echo "Name: $dataset_name"
-    echo "ID: $dataset_id"
-    echo "Import mode: $import_mode"
-    echo "Created: $created_time"
-    echo "Updated: $updated_time"
-    echo "---"
-  done
-}
-
 #--- Main Processing -----------------------------------------
 
 # Parse options
@@ -268,19 +256,19 @@ shift || true
 # Execute command
 case "$COMMAND" in
   list-datasets)
-    list_datasets "$@"
+    cmd_list_target_datasets "$@"
     ;;
   list-analyses)
-    list_analyses "$@"
+    cmd_list_target_analyses "$@"
     ;;
   export-datasets)
-    export_datasets "$@"
+    cmd_export_datasets "$@"
     ;;
   export-analyses)
-    export_analyses "$@"
+    cmd_export_analyses "$@"
     ;;
   export-all)
-    export_all "$@"
+    cmd_export_all "$@"
     ;;
   help|--help|-h)
     show_help
