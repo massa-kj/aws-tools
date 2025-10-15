@@ -50,3 +50,58 @@ validate_db_instance_id() {
     return 1
   fi
 }
+
+# Find available local port for SSH tunneling
+find_available_port() {
+  local start_port="${1:-5432}"
+  local max_attempts=50
+  local port=$start_port
+  
+  for ((i=0; i<max_attempts; i++)); do
+    if ! command -v netstat >/dev/null 2>&1; then
+      # If netstat is not available, try nc or ss
+      if command -v nc >/dev/null 2>&1; then
+        if ! nc -z localhost "$port" 2>/dev/null; then
+          echo "$port"
+          return 0
+        fi
+      elif command -v ss >/dev/null 2>&1; then
+        if ! ss -ln | grep -q ":$port "; then
+          echo "$port"
+          return 0
+        fi
+      else
+        # Fallback: just return the port (might fail later)
+        echo "$port"
+        return 0
+      fi
+    else
+      if ! netstat -ln | grep -q ":$port "; then
+        echo "$port"
+        return 0
+      fi
+    fi
+    port=$((port + 1))
+  done
+  
+  log_error "Could not find available port after $max_attempts attempts"
+  return 1
+}
+
+# Parse RDS connection string/endpoint
+parse_rds_endpoint() {
+  local endpoint="$1"
+  local parsed_info
+  
+  # Extract hostname and port from endpoint
+  if [[ "$endpoint" =~ ^(.+):([0-9]+)$ ]]; then
+    parsed_info="{\"host\":\"${BASH_REMATCH[1]}\",\"port\":\"${BASH_REMATCH[2]}\"}"
+  else
+    # Assume default port based on engine type (will be handled by caller)
+    parsed_info="{\"host\":\"$endpoint\",\"port\":\"\"}"
+  fi
+  
+  echo "$parsed_info"
+}
+
+

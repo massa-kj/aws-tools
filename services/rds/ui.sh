@@ -22,20 +22,28 @@ Usage:
 
 Available commands:
   list                               List RDS database instances
-  start <db-instance-identifier>     Start an RDS database instance
-  stop <db-instance-identifier>      Stop an RDS database instance
-  describe <db-instance-identifier>  Show detailed database instance information
+  start [db-instance-identifier]     Start an RDS database instance
+  stop [db-instance-identifier]      Stop an RDS database instance
+  describe [db-instance-identifier]  Show detailed database instance information
+  connect [db-instance-identifier]   Connect to RDS via Session Manager tunnel
   help                               Show this help
 
 Options:
+  common options:
   --profile <name>                   Override AWS profile
   --region <region>                  Override AWS region
+
+  connect command options:
+  --instance-id <id>                 Specify EC2 instance for tunneling
+  --local-port <port>                Specify local port for tunneling
 
 Examples:
   awstools rds list
   awstools rds start my-database
   awstools rds stop my-database --profile myteam
   awstools rds describe my-database
+  awstools rds connect my-database
+  awstools rds connect my-database --instance-id i-1234567890abcdef0 --local-port 15432
 EOF
 }
 
@@ -51,6 +59,16 @@ parse_options() {
       --region)
         export AWS_REGION="${2:-$AWS_REGION}"
         log_debug "Region overridden to: ${AWS_REGION}"
+        shift 2
+        ;;
+      --instance-id)
+        BASTION_INSTANCE_ID="${2:-}"
+        log_debug "Bastion instance ID: ${BASTION_INSTANCE_ID}"
+        shift 2
+        ;;
+      --local-port)
+        TUNNEL_LOCAL_PORT="${2:-}"
+        log_debug "Local tunnel port: ${TUNNEL_LOCAL_PORT}"
         shift 2
         ;;
       --help|-h)
@@ -75,7 +93,7 @@ cmd_list() {
 }
 
 cmd_start() {
-  local db_instance_id="${1:-}"
+  local db_instance_id="${1:-$AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}"
   if [ -z "$db_instance_id" ]; then
     log_error "Usage: awstools rds start <db-instance-identifier>"
     return 1
@@ -105,7 +123,7 @@ cmd_start() {
 }
 
 cmd_stop() {
-  local db_instance_id="${1:-}"
+  local db_instance_id="${1:-$AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}"
   if [ -z "$db_instance_id" ]; then
     log_error "Usage: awstools rds stop <db-instance-identifier>"
     return 1
@@ -140,7 +158,7 @@ cmd_stop() {
 }
 
 cmd_describe() {
-  local db_instance_id="${1:-}"
+  local db_instance_id="${1:-$AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}"
   if [ -z "$db_instance_id" ]; then
     log_error "Usage: awstools rds describe <db-instance-identifier>"
     return 1
@@ -148,6 +166,97 @@ cmd_describe() {
   log_info "Describing RDS instance: ${db_instance_id}"
   ensure_aws_ready
   rds_describe_instance "$db_instance_id"
+}
+
+cmd_connect() {
+  local db_instance_id="${1:-$AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}"
+  if [ -z "$db_instance_id" ]; then
+    log_error "Usage: awstools rds connect <db-instance-identifier>"
+    return 1
+  fi
+
+  ensure_aws_ready
+
+  log_info "Setting up secure connection to RDS instance: ${db_instance_id}"
+
+  # Get RDS connection information
+  local connection_info
+  connection_info=$(rds_get_connection_info "$db_instance_id") || return 1
+
+  local db_endpoint db_port db_engine db_name vpc_id
+  db_endpoint=$(echo "$connection_info" | jq -r '.Endpoint // empty')
+  db_port=$(echo "$connection_info" | jq -r '.Port // empty')
+  db_engine=$(echo "$connection_info" | jq -r '.Engine // empty')
+  db_name=$(echo "$connection_info" | jq -r '.DBName // empty')
+  vpc_id=$(echo "$connection_info" | jq -r '.VpcId // empty')
+
+  if [ -z "$db_endpoint" ] || [ -z "$db_port" ]; then
+    log_error "Could not retrieve connection information for DB instance: $db_instance_id"
+    return 1
+  fi
+
+  log_info "Database details:"
+  log_info "  Endpoint: $db_endpoint"
+  log_info "  Port: $db_port"
+  log_info "  Engine: $db_engine"
+  [ -n "$db_name" ] && log_info "  Database: $db_name"
+  [ -n "$vpc_id" ] && log_info "  VPC: $vpc_id"
+
+  # Select bastion instance if not provided
+  local instance_id="${BASTION_INSTANCE_ID:-$AWSTOOLS_RDS_SSM_DEFAULT_BASTION_INSTANCE_ID}"
+  if [ -z "$instance_id" ]; then
+    log_info ""
+    log_info "Finding suitable bastion instances..."
+    rds_list_bastion_instances "$vpc_id"
+    
+    echo ""
+    read -r -p "Enter EC2 instance ID to use as bastion: " instance_id
+    
+    if [ -z "$instance_id" ]; then
+      log_error "No instance ID provided"
+      return 1
+    fi
+  fi
+
+  # Validate bastion instance
+  log_info "Validating bastion instance: $instance_id"
+  if ! rds_check_ssm_connectivity "$instance_id"; then
+    log_error "Instance $instance_id is not suitable for Session Manager tunneling"
+    log_info "Ensure the instance has:"
+    log_info "  1. SSM Agent installed and running"
+    log_info "  2. Appropriate IAM role with SSM permissions"
+    log_info "  3. Network connectivity to the RDS instance"
+    return 1
+  fi
+
+  log_info "✓ Instance $instance_id is ready for Session Manager"
+
+  # Determine local port
+  local local_port="${TUNNEL_LOCAL_PORT:-$AWSTOOLS_RDS_SSM_DEFAULT_LOCAL_PORT_START}"
+  if [ -z "$local_port" ]; then
+    local_port=$(find_available_port "${AWSTOOLS_RDS_SSM_LOCAL_PORT_START}") || return 1
+    log_info "Using available local port: $local_port"
+  else
+    log_info "Using specified local port: $local_port"
+  fi
+
+  log_info ""
+  log_info "=============================================="
+  log_info "Session Manager Tunnel Setup"
+  log_info "=============================================="
+  log_info "Local port: $local_port"
+  log_info "Target: $db_endpoint:$db_port"
+  log_info "Bastion: $instance_id"
+  log_info ""
+  log_info "After the tunnel is established, you can connect to:"
+  log_info "  Host: localhost"
+  log_info "  Port: $local_port"
+  log_info ""
+  log_info "Starting tunnel (press Ctrl+C to stop)..."
+  log_info "=============================================="
+
+  # Start the tunnel
+  rds_start_ssm_tunnel "$instance_id" "$db_endpoint" "$db_port" "$local_port"
 }
 
 #--- Main Processing -----------------------------------------
@@ -178,6 +287,9 @@ case "$COMMAND" in
     ;;
   describe)
     cmd_describe "$@"
+    ;;
+  connect)
+    cmd_connect "$@"
     ;;
   help|--help|-h)
     show_help
