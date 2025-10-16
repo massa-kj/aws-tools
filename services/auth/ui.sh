@@ -21,14 +21,20 @@ Usage:
   awstools auth <command> [options...]
 
 Available commands:
+  detect                  Detect authentication method
   sso-login <profile>     Login using AWS SSO
+  list-profiles           List available profiles
+  profile-info <profile>  Show detailed profile configuration
   help                    Show this help
 
 Options:
   --region <region>       Override AWS region
 
 Examples:
+  awstools auth detect
   awstools auth sso-login my-sso-profile
+  awstools auth list-profiles
+  awstools auth profile-info my-profile
 EOF
 }
 
@@ -78,6 +84,63 @@ cmd_sso_login() {
   fi
 }
 
+cmd_detect() {
+  log_debug "Detecting authentication method"
+  
+  local method
+  method=$(detect_auth_method)
+  
+  echo "Detected authentication method: $method"
+  
+  case "$method" in
+    env-vars*)
+      echo "Using environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)"
+      ;;
+    profile-sso:*)
+      local profile_name="${method#*:}"
+      echo "Using SSO profile: $profile_name"
+      local sso_status
+      sso_status=$(auth_sso_status "$profile_name" 2>/dev/null || echo "expired")
+      echo "SSO session status: $sso_status"
+      ;;
+    profile-assume:*)
+      local profile_name="${method#*:}"
+      echo "Using assume role profile: $profile_name"
+      ;;
+    profile-accesskey:*)
+      local profile_name="${method#*:}"
+      echo "Using access key profile: $profile_name"
+      ;;
+    instance-profile)
+      echo "Using EC2 instance profile"
+      ;;
+    web-identity)
+      echo "Using web identity token (EKS, etc.)"
+      ;;
+    unknown)
+      echo "No authentication method detected"
+      return 1
+      ;;
+  esac
+}
+
+cmd_list_profiles() {
+  log_debug "Listing available profiles"
+  auth_list_profiles
+}
+
+cmd_profile_info() {
+  local profile_name="${1:-}"
+  
+  if [[ -z "$profile_name" ]]; then
+    log_error "Usage: awstools auth profile-info <profile-name>"
+    return 1
+  fi
+  
+  log_debug "Getting profile information for: $profile_name"
+  get_profile_config "$profile_name"
+}
+
 #--- Main Processing -----------------------------------------
 
 # Initialize variables
@@ -96,8 +159,17 @@ shift || true
 
 # Execute command
 case "$COMMAND" in
+  detect)
+    cmd_detect "$@"
+    ;;
   sso-login)
     cmd_sso_login "$@"
+    ;;
+  list-profiles)
+    cmd_list_profiles "$@"
+    ;;
+  profile-info)
+    cmd_profile_info "$@"
     ;;
   help|--help|-h)
     show_help

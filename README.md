@@ -61,7 +61,7 @@ A unified command-line interface for managing multiple AWS services with a clean
 ./awstools.sh --help
 
 # Detect current authentication method
-./awstools.sh detect-auth
+./awstools.sh auth sso-login --profile myprofile
 
 # List EC2 instances
 ./awstools.sh ec2 list
@@ -105,7 +105,7 @@ aws-tools/
 ├── scripts/                  # Scripts
 │   └── init-user-config.sh   # Initialize user configuration
 ├── commands/                 # Global commands
-│   └── {command}.sh          # Individual command scripts (help, version, detect-auth)
+│   └── {command}.sh          # Individual command scripts (help, version...)
 ├── common/                   # Shared utilities
 │   ├── config-loader.sh      # Configuration loader
 │   ├── discovery.sh          # Service and command discovery utilities
@@ -345,7 +345,6 @@ The `common/` directory provides shared functionality across all services:
 |---------|-------------|
 | version | Show version information |
 | help | Show help information |
-| detect-auth | Detect current AWS authentication method |
 
 ## Development
 

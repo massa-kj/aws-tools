@@ -32,7 +32,7 @@ Common options:
   --help, -h             Show help
 
 Examples:
-  awstools.sh detect-auth
+  awstools.sh help
   awstools.sh ec2 list
   awstools.sh quicksight backup --profile my-profile
 EOF
