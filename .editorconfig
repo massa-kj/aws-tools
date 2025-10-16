@@ -12,9 +12,10 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 2
 # shfmt formatting options
-binary_next_line = true
-switch_case_indent = true
-space_redirects = true
+binary_next_line = true  # = -bn
+space_redirects = false  # = -sr
+simplify = true          # = -s
+case_indent = true       # = -ci
 
 [*.md]
 indent_style = space
