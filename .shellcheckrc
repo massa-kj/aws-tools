@@ -1,0 +1,15 @@
+# ShellCheck configuration for aws-tools project
+
+# Enable all optional checks
+enable=all
+
+# Disable specific checks that don't apply to this project
+disable=SC1091  # Disable "not following" sourced files (external dependencies)
+disable=SC2034  # Allow unused variables (may be used in sourced files)
+disable=SC2164  # Allow cd without error handling in some contexts
+
+# Set shell dialect (bash is primary target)
+shell=bash
+
+# Source additional directories for shellcheck to find sourced files
+source-path=common:services/*/
