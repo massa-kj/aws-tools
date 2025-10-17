@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #=============================================================
-# lint.sh - Shell script linting and formatting tool
+# lint.sh - Shell script linting tool
 #=============================================================
 
 set -euo pipefail
@@ -13,8 +13,6 @@ source "$BASE_DIR/common/logger.sh"
 
 # Configuration
 SHELLCHECK_ENABLED=true
-SHFMT_ENABLED=true
-FIX_MODE=false
 QUIET_MODE=false
 
 # Function to check if command exists
@@ -25,25 +23,21 @@ command_exists() {
 # Function to show usage
 show_usage() {
   cat <<EOF
-Shell Script Linting and Formatting Tool
+Shell Script Linting Tool
 
 Usage: $0 [OPTIONS] [FILES...]
 
 OPTIONS:
-  --fix             Automatically fix formatting issues with shfmt
   --quiet           Suppress output except for errors
   --no-shellcheck   Skip ShellCheck linting
-  --no-shfmt        Skip shfmt formatting checks
   --help           Show this help message
 
 EXAMPLES:
   $0                          # Lint all shell scripts in the project
   $0 awstools.sh             # Lint specific file
-  $0 --fix services/         # Fix formatting for all scripts in services/
 
 TOOLS USED:
   - ShellCheck: Static analysis for shell scripts
-  - shfmt: Shell script formatter (gofmt for shell)
 EOF
 }
 
@@ -100,44 +94,6 @@ run_shellcheck() {
   return $exit_code
 }
 
-# Function to run shfmt
-run_shfmt() {
-  local files=("$@")
-  local exit_code=0
-
-  if [ "$SHFMT_ENABLED" != "true" ]; then
-    return 0
-  fi
-
-  if ! command_exists shfmt; then
-    log_error "shfmt not found."
-    return 1
-  fi
-
-  log_info --color="$COLOR_BLUE" "Running shfmt..."
-
-  # Use EditorConfig settings (no need to specify formatting flags)
-  local shfmt_args=()
-  if [ "$FIX_MODE" = "true" ]; then
-    shfmt_args+=("-w")
-    log_warn --color="$COLOR_YELLOW" "Fixing format issues..."
-  else
-    shfmt_args+=("-d")
-  fi
-
-  for file in "${files[@]}"; do
-    if [ "$QUIET_MODE" != "true" ]; then
-      echo "Formatting: $file"
-    fi
-
-    if ! shfmt "${shfmt_args[@]}" "$file"; then
-      exit_code=1
-    fi
-  done
-
-  return $exit_code
-}
-
 # Main function
 main() {
   local search_paths=()
@@ -145,20 +101,12 @@ main() {
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --fix)
-        FIX_MODE=true
-        shift
-        ;;
       --quiet)
         QUIET_MODE=true
         shift
         ;;
       --no-shellcheck)
         SHELLCHECK_ENABLED=false
-        shift
-        ;;
-      --no-shfmt)
-        SHFMT_ENABLED=false
         shift
         ;;
       --help|-h)
@@ -193,11 +141,6 @@ main() {
 
   # Run ShellCheck
   if ! run_shellcheck "${shell_files[@]}"; then
-    overall_exit_code=1
-  fi
-
-  # Run shfmt
-  if ! run_shfmt "${shell_files[@]}"; then
     overall_exit_code=1
   fi
 
