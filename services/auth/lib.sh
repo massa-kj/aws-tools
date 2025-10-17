@@ -9,22 +9,22 @@ set -euo pipefail
 if [[ -z "${AUTH_LIB_LOADED:-}" ]]; then
   # Determine script directory and base directory
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  BASE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-  COMMON_DIR="$BASE_DIR/common"
+  BASE_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+  COMMON_DIR="${BASE_DIR}/common"
 
   # Load common configuration and utilities only once
   if [[ -z "${AWS_TOOLS_CONFIG_LOADED:-}" ]]; then
-    source "$COMMON_DIR/config-loader.sh"
+    source "${COMMON_DIR}/config-loader.sh"
     export AWS_TOOLS_CONFIG_LOADED=1
   fi
 
   if [[ -z "${AWS_TOOLS_LOGGER_LOADED:-}" ]]; then
-    source "$COMMON_DIR/logger.sh"
+    source "${COMMON_DIR}/logger.sh"
     export AWS_TOOLS_LOGGER_LOADED=1
   fi
 
   if [[ -z "${AWS_TOOLS_UTILS_LOADED:-}" ]]; then
-    source "$COMMON_DIR/utils.sh"
+    source "${COMMON_DIR}/utils.sh"
     export AWS_TOOLS_UTILS_LOADED=1
   fi
 
@@ -95,19 +95,19 @@ detect_auth_mode() {
   local profile="$1"
 
   # Whether SSO setting exists
-  if aws configure get sso_start_url --profile "$profile" >/dev/null 2>&1; then
+  if aws configure get sso_start_url --profile "${profile}" >/dev/null 2>&1; then
     echo "sso"
     return
   fi
 
   # Whether AssumeRole setting exists
-  if aws configure get role_arn --profile "$profile" >/dev/null 2>&1; then
+  if aws configure get role_arn --profile "${profile}" >/dev/null 2>&1; then
     echo "assume"
     return
   fi
 
   # Whether Access Key setting exists
-  if aws configure get aws_access_key_id --profile "$profile" >/dev/null 2>&1; then
+  if aws configure get aws_access_key_id --profile "${profile}" >/dev/null 2>&1; then
     echo "access"
     return
   fi
@@ -121,7 +121,7 @@ detect_auth_mode() {
 profile_exists() {
   local profile_name="$1"
   
-  if [[ -z "$profile_name" ]]; then
+  if [[ -z "${profile_name}" ]]; then
     log_error "Profile name is required"
     return 1
   fi
@@ -135,12 +135,12 @@ profile_exists() {
 is_sso_profile() {
   local profile_name="$1"
   
-  if [[ -z "$profile_name" ]]; then
+  if [[ -z "${profile_name}" ]]; then
     log_error "Profile name is required"
     return 1
   fi
   
-  aws configure get sso_account_id --profile "$profile_name" >/dev/null 2>&1
+  aws configure get sso_account_id --profile "${profile_name}" >/dev/null 2>&1
 }
 
 #
@@ -149,28 +149,28 @@ is_sso_profile() {
 get_profile_config() {
   local profile_name="$1"
   
-  if [[ -z "$profile_name" ]]; then
+  if [[ -z "${profile_name}" ]]; then
     log_error "Profile name is required"
     return 1
   fi
   
-  if ! profile_exists "$profile_name"; then
-    log_error "Profile '$profile_name' does not exist"
+  if ! profile_exists "${profile_name}"; then
+    log_error "Profile '${profile_name}' does not exist"
     return 1
   fi
   
   local config_output
-  config_output=$(aws configure list --profile "$profile_name" 2>/dev/null)
+  config_output=$(aws configure list --profile "${profile_name}" 2>/dev/null)
   
-  echo "Profile Configuration: $profile_name"
-  echo "$config_output"
+  echo "Profile Configuration: ${profile_name}"
+  echo "${config_output}"
   
   # Additional SSO/Role information
-  if is_sso_profile "$profile_name"; then
+  if is_sso_profile "${profile_name}"; then
     echo ""
     echo "SSO Configuration:"
-    echo "  Start URL: $(aws configure get sso_start_url --profile "$profile_name" 2>/dev/null || echo "Not configured")"
-    echo "  Account ID: $(aws configure get sso_account_id --profile "$profile_name" 2>/dev/null || echo "Not configured")"
-    echo "  Role Name: $(aws configure get sso_role_name --profile "$profile_name" 2>/dev/null || echo "Not configured")"
+    echo "  Start URL: $(aws configure get sso_start_url --profile "${profile_name}" 2>/dev/null || echo "Not configured")"
+    echo "  Account ID: $(aws configure get sso_account_id --profile "${profile_name}" 2>/dev/null || echo "Not configured")"
+    echo "  Role Name: $(aws configure get sso_role_name --profile "${profile_name}" 2>/dev/null || echo "Not configured")"
   fi
 }

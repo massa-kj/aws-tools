@@ -7,8 +7,8 @@ set -euo pipefail
 
 # Load service-specific libraries (dependencies managed by lib.sh)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib.sh"  # This also loads common libraries
-source "$SCRIPT_DIR/api.sh"
+source "${SCRIPT_DIR}/lib.sh"  # This also loads common libraries
+source "${SCRIPT_DIR}/api.sh"
 
 load_config "" "auth"
 
@@ -44,9 +44,9 @@ parse_options() {
     case "$1" in
       --region)
         OVERRIDE_REGION="${2:-}"
-        if [[ -n "$OVERRIDE_REGION" ]]; then
-          export AWS_REGION="$OVERRIDE_REGION"
-          log_debug "Region overridden to: $AWS_REGION"
+        if [[ -n "${OVERRIDE_REGION}" ]]; then
+          export AWS_REGION="${OVERRIDE_REGION}"
+          log_debug "Region overridden to: ${AWS_REGION}"
         fi
         shift 2
         ;;
@@ -66,18 +66,18 @@ parse_options() {
 #--- Command Implementation -----------------------------------
 
 cmd_sso_login() {
-  local profile_name="${1:-$AWS_PROFILE}"
+  local profile_name="${1:-${AWS_PROFILE}}"
   
-  if [[ -z "$profile_name" ]]; then
+  if [[ -z "${profile_name}" ]]; then
     log_error "Usage: awstools auth login-sso <profile-name>"
     return 1
   fi
   
-  log_info "Logging in with SSO profile: $profile_name"
+  log_info "Logging in with SSO profile: ${profile_name}"
 
-  if login_sso "$profile_name"; then
+  if login_sso "${profile_name}"; then
     log_info "✅ SSO login successful"
-    export AWS_PROFILE="$profile_name"
+    export AWS_PROFILE="${profile_name}"
   else
     log_error "❌ SSO login failed"
     return 1
@@ -90,26 +90,26 @@ cmd_detect() {
   local method
   method=$(detect_auth_method)
   
-  echo "Detected authentication method: $method"
+  echo "Detected authentication method: ${method}"
   
-  case "$method" in
+  case "${method}" in
     env-vars*)
       echo "Using environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)"
       ;;
     profile-sso:*)
       local profile_name="${method#*:}"
-      echo "Using SSO profile: $profile_name"
+      echo "Using SSO profile: ${profile_name}"
       local sso_status
-      sso_status=$(auth_sso_status "$profile_name" 2>/dev/null || echo "expired")
-      echo "SSO session status: $sso_status"
+      sso_status=$(auth_sso_status "${profile_name}" 2>/dev/null || echo "expired")
+      echo "SSO session status: ${sso_status}"
       ;;
     profile-assume:*)
       local profile_name="${method#*:}"
-      echo "Using assume role profile: $profile_name"
+      echo "Using assume role profile: ${profile_name}"
       ;;
     profile-accesskey:*)
       local profile_name="${method#*:}"
-      echo "Using access key profile: $profile_name"
+      echo "Using access key profile: ${profile_name}"
       ;;
     instance-profile)
       echo "Using EC2 instance profile"
@@ -132,13 +132,13 @@ cmd_list_profiles() {
 cmd_profile_info() {
   local profile_name="${1:-}"
   
-  if [[ -z "$profile_name" ]]; then
+  if [[ -z "${profile_name}" ]]; then
     log_error "Usage: awstools auth profile-info <profile-name>"
     return 1
   fi
   
-  log_debug "Getting profile information for: $profile_name"
-  get_profile_config "$profile_name"
+  log_debug "Getting profile information for: ${profile_name}"
+  get_profile_config "${profile_name}"
 }
 
 #--- Main Processing -----------------------------------------
@@ -151,14 +151,14 @@ set -- "${REMAINING_ARGS[@]}"
 
 # Get command
 COMMAND="${1:-}"
-if [ -z "$COMMAND" ]; then
+if [[ -z "${COMMAND}" ]]; then
   show_help
   exit 1
 fi
 shift || true
 
 # Execute command
-case "$COMMAND" in
+case "${COMMAND}" in
   detect)
     cmd_detect "$@"
     ;;
@@ -175,7 +175,7 @@ case "$COMMAND" in
     show_help
     ;;
   *)
-    log_error "Unknown command: $COMMAND"
+    log_error "Unknown command: ${COMMAND}"
     log_info "Run 'awstools auth help' for available commands"
     exit 1
     ;;

@@ -12,26 +12,26 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 login_sso() {
   local profile="$1"
-  log_info "Using SSO login for profile: $profile"
-  aws sso login --profile "$profile"
+  log_info "Using SSO login for profile: ${profile}"
+  aws sso login --profile "${profile}"
 }
 
 login_assume() {
   local profile="$1"
   local role_arn
-  role_arn=$(aws configure get role_arn --profile "$profile")
+  role_arn=$(aws configure get role_arn --profile "${profile}")
   local creds
-  creds=$(aws sts assume-role --role-arn "$role_arn" --role-session-name "auth-session")
+  creds=$(aws sts assume-role --role-arn "${role_arn}" --role-session-name "auth-session")
 
-  export AWS_ACCESS_KEY_ID=$(jq -r '.Credentials.AccessKeyId' <<<"$creds")
-  export AWS_SECRET_ACCESS_KEY=$(jq -r '.Credentials.SecretAccessKey' <<<"$creds")
-  export AWS_SESSION_TOKEN=$(jq -r '.Credentials.SessionToken' <<<"$creds")
+  export AWS_ACCESS_KEY_ID=$(jq -r '.Credentials.AccessKeyId' <<<"${creds}")
+  export AWS_SECRET_ACCESS_KEY=$(jq -r '.Credentials.SecretAccessKey' <<<"${creds}")
+  export AWS_SESSION_TOKEN=$(jq -r '.Credentials.SessionToken' <<<"${creds}")
 }
 
 login_access() {
   local profile="$1"
-  log_info "Using static access key for profile: $profile"
-  export AWS_PROFILE="$profile"
+  log_info "Using static access key for profile: ${profile}"
+  export AWS_PROFILE="${profile}"
 }
 
 #
@@ -40,18 +40,18 @@ login_access() {
 auth_sso_status() {
   local profile_name="${1:-}"
   
-  if [[ -z "$profile_name" ]]; then
+  if [[ -z "${profile_name}" ]]; then
     log_error "Usage: auth_sso_status <profile-name>"
     return 1
   fi
   
-  if ! is_sso_profile "$profile_name"; then
-    log_error "Profile '$profile_name' is not configured for SSO"
+  if ! is_sso_profile "${profile_name}"; then
+    log_error "Profile '${profile_name}' is not configured for SSO"
     return 1
   fi
   
   # Try to get caller identity with the SSO profile
-  if aws sts get-caller-identity --profile "$profile_name" >/dev/null 2>&1; then
+  if aws sts get-caller-identity --profile "${profile_name}" >/dev/null 2>&1; then
     echo "active"
     return 0
   else
@@ -72,7 +72,7 @@ auth_list_profiles() {
     return 1
   fi
   
-  if [[ -z "$profiles" ]]; then
+  if [[ -z "${profiles}" ]]; then
     log_warn "No AWS profiles configured"
     return 0
   fi
@@ -85,9 +85,9 @@ auth_list_profiles() {
     local status_indicator=""
     
     # Determine profile type
-    if is_sso_profile "$profile"; then
+    if is_sso_profile "${profile}"; then
       profile_type="sso"
-      if [[ "$(auth_sso_status "$profile" 2>/dev/null)" == "active" ]]; then
+      if [[ "$(auth_sso_status "${profile}" 2>/dev/null)" == "active" ]]; then
         status_indicator=" ✓"
       else
         status_indicator=" (expired)"
@@ -96,12 +96,12 @@ auth_list_profiles() {
     
     # Mark current profile
     local current_marker=""
-    if [[ "${AWS_PROFILE:-}" == "$profile" ]]; then
+    if [[ "${AWS_PROFILE:-}" == "${profile}" ]]; then
       current_marker=" *"
     fi
     
-    printf "  %-20s [%-11s]%s%s\n" "$profile" "$profile_type" "$status_indicator" "$current_marker"
-  done <<< "$profiles"
+    printf "  %-20s [%-11s]%s%s\n" "${profile}" "${profile_type}" "${status_indicator}" "${current_marker}"
+  done <<< "${profiles}"
   
   echo ""
   echo "Legend: * = current profile, ✓ = active SSO session"

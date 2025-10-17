@@ -14,17 +14,17 @@ if [[ -z "${EC2_LIB_LOADED:-}" ]]; then
 
   # Load common configuration and utilities only once
   if [[ -z "${AWS_TOOLS_CONFIG_LOADED:-}" ]]; then
-    source "$COMMON_DIR/config-loader.sh"
+    source "${COMMON_DIR}/config-loader.sh"
     export AWS_TOOLS_CONFIG_LOADED=1
   fi
 
   if [[ -z "${AWS_TOOLS_LOGGER_LOADED:-}" ]]; then
-    source "$COMMON_DIR/logger.sh"
+    source "${COMMON_DIR}/logger.sh"
     export AWS_TOOLS_LOGGER_LOADED=1
   fi
 
   if [[ -z "${AWS_TOOLS_UTILS_LOADED:-}" ]]; then
-    source "$COMMON_DIR/utils.sh"
+    source "${COMMON_DIR}/utils.sh"
     export AWS_TOOLS_UTILS_LOADED=1
   fi
 

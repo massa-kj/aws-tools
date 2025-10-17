@@ -7,8 +7,8 @@ set -euo pipefail
 
 # Load service-specific libraries (dependencies managed by lib.sh)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib.sh"  # This also loads common libraries
-source "$SCRIPT_DIR/api.sh"
+source "${SCRIPT_DIR}/lib.sh"  # This also loads common libraries
+source "${SCRIPT_DIR}/api.sh"
 
 load_config "" "ec2"
 
@@ -43,12 +43,12 @@ parse_options() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --profile)
-        export AWS_PROFILE="${2:-$AWS_PROFILE}"
+        export AWS_PROFILE="${2:-${AWS_PROFILE}}"
         log_debug "Profile overridden to: ${AWS_PROFILE}"
         shift 2
         ;;
       --region)
-        export AWS_REGION="${2:-$AWS_REGION}"
+        export AWS_REGION="${2:-${AWS_REGION}}"
         log_debug "Region overridden to: ${AWS_REGION}"
         shift 2
         ;;
@@ -75,7 +75,7 @@ cmd_list() {
 
 cmd_start() {
   local instance_id="${1:-}"
-  if [ -z "$instance_id" ]; then
+  if [[ -z "${instance_id}" ]]; then
     log_error "Usage: awstools ec2 start <instance-id>"
     return 1
   fi
@@ -85,27 +85,27 @@ cmd_start() {
   
   # Check current state
   local current_state
-  current_state=$(ec2_get_instance_state "$instance_id") || return 1
+  current_state=$(ec2_get_instance_state "${instance_id}") || return 1
   
-  if [ "$current_state" = "running" ]; then
-    log_warn "Instance $instance_id is already running"
+  if [[ "${current_state}" = "running" ]]; then
+    log_warn "Instance ${instance_id} is already running"
     return 0
-  elif [ "$current_state" != "stopped" ]; then
-    log_error "Cannot start instance $instance_id from state: $current_state"
+  elif [[ "${current_state}" != "stopped" ]]; then
+    log_error "Cannot start instance ${instance_id} from state: ${current_state}"
     return 1
   fi
   
   # Start the instance
-  ec2_start_instance "$instance_id" || return 1
+  ec2_start_instance "${instance_id}" || return 1
   
   # Wait for it to be running
   log_info "Waiting for instance to start..."
-  ec2_wait_for_instance_state "$instance_id" "running" 180
+  ec2_wait_for_instance_state "${instance_id}" "running" 180
 }
 
 cmd_stop() {
   local instance_id="${1:-}"
-  if [ -z "$instance_id" ]; then
+  if [[ -z "${instance_id}" ]]; then
     log_error "Usage: awstools ec2 stop <instance-id>"
     return 1
   fi
@@ -114,13 +114,13 @@ cmd_stop() {
 
   # Check current state
   local current_state
-  current_state=$(ec2_get_instance_state "$instance_id") || return 1
+  current_state=$(ec2_get_instance_state "${instance_id}") || return 1
   
-  if [ "$current_state" = "stopped" ]; then
-    log_warn "Instance $instance_id is already stopped"
+  if [[ "${current_state}" = "stopped" ]]; then
+    log_warn "Instance ${instance_id} is already stopped"
     return 0
-  elif [ "$current_state" != "running" ]; then
-    log_error "Cannot stop instance $instance_id from state: $current_state"
+  elif [[ "${current_state}" != "running" ]]; then
+    log_error "Cannot stop instance ${instance_id} from state: ${current_state}"
     return 1
   fi
 
@@ -131,22 +131,22 @@ cmd_stop() {
   fi
 
   log_info "Stopping EC2 instance: ${instance_id}"
-  ec2_stop_instance "$instance_id" || return 1
+  ec2_stop_instance "${instance_id}" || return 1
   
   # Wait for it to be stopped
   log_info "Waiting for instance to stop..."
-  ec2_wait_for_instance_state "$instance_id" "stopped" 180
+  ec2_wait_for_instance_state "${instance_id}" "stopped" 180
 }
 
 cmd_describe() {
   local instance_id="${1:-}"
-  if [ -z "$instance_id" ]; then
+  if [[ -z "${instance_id}" ]]; then
     log_error "Usage: awstools ec2 describe <instance-id>"
     return 1
   fi
   log_info "Describing EC2 instance: ${instance_id}"
   ensure_aws_ready
-  ec2_describe_instance "$instance_id"
+  ec2_describe_instance "${instance_id}"
 }
 
 #--- Main Processing -----------------------------------------
@@ -158,14 +158,14 @@ set -- "${REMAINING_ARGS[@]}"
 
 # Get command
 COMMAND="${1:-}"
-if [ -z "$COMMAND" ]; then
+if [[ -z "${COMMAND}" ]]; then
   show_help
   exit 1
 fi
 shift || true
 
 # Execute command
-case "$COMMAND" in
+case "${COMMAND}" in
   list)
     cmd_list "$@"
     ;;
@@ -182,7 +182,7 @@ case "$COMMAND" in
     show_help
     ;;
   *)
-    log_error "Unknown command: $COMMAND"
+    log_error "Unknown command: ${COMMAND}"
     log_info "Run 'awstools ec2 help' for available commands"
     exit 1
     ;;

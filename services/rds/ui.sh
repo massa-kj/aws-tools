@@ -7,8 +7,8 @@ set -euo pipefail
 
 # Load service-specific libraries (dependencies managed by lib.sh)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib.sh"  # This also loads common libraries
-source "$SCRIPT_DIR/api.sh"
+source "${SCRIPT_DIR}/lib.sh"  # This also loads common libraries
+source "${SCRIPT_DIR}/api.sh"
 
 load_config "" "rds"
 
@@ -52,12 +52,12 @@ parse_options() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --profile)
-        export AWS_PROFILE="${2:-$AWS_PROFILE}"
+        export AWS_PROFILE="${2:-${AWS_PROFILE}}"
         log_debug "Profile overridden to: ${AWS_PROFILE}"
         shift 2
         ;;
       --region)
-        export AWS_REGION="${2:-$AWS_REGION}"
+        export AWS_REGION="${2:-${AWS_REGION}}"
         log_debug "Region overridden to: ${AWS_REGION}"
         shift 2
         ;;
@@ -93,8 +93,8 @@ cmd_list() {
 }
 
 cmd_start() {
-  local db_instance_id="${1:-$AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}"
-  if [ -z "$db_instance_id" ]; then
+  local db_instance_id="${1:-${AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}}"
+  if [[ -z "${db_instance_id}" ]]; then
     log_error "Usage: awstools rds start <db-instance-identifier>"
     return 1
   fi
@@ -104,27 +104,27 @@ cmd_start() {
   
   # Check current status
   local current_status
-  current_status=$(rds_get_instance_status "$db_instance_id") || return 1
+  current_status=$(rds_get_instance_status "${db_instance_id}") || return 1
   
-  if [ "$current_status" = "available" ]; then
-    log_warn "DB instance $db_instance_id is already available"
+  if [[ "${current_status}" = "available" ]]; then
+    log_warn "DB instance ${db_instance_id} is already available"
     return 0
-  elif [ "$current_status" != "stopped" ]; then
-    log_error "Cannot start DB instance $db_instance_id from status: $current_status"
+  elif [[ "${current_status}" != "stopped" ]]; then
+    log_error "Cannot start DB instance ${db_instance_id} from status: ${current_status}"
     return 1
   fi
   
   # Start the instance
-  rds_start_instance "$db_instance_id" || return 1
+  rds_start_instance "${db_instance_id}" || return 1
   
   # Wait for it to be available
   log_info "Waiting for DB instance to be available (this may take several minutes)..."
-  rds_wait_for_instance_status "$db_instance_id" "available" "${AWSTOOLS_RDS_START_WAIT_TIMEOUT}"
+  rds_wait_for_instance_status "${db_instance_id}" "available" "${AWSTOOLS_RDS_START_WAIT_TIMEOUT}"
 }
 
 cmd_stop() {
-  local db_instance_id="${1:-$AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}"
-  if [ -z "$db_instance_id" ]; then
+  local db_instance_id="${1:-${AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}}"
+  if [[ -z "${db_instance_id}" ]]; then
     log_error "Usage: awstools rds stop <db-instance-identifier>"
     return 1
   fi
@@ -133,13 +133,13 @@ cmd_stop() {
 
   # Check current status
   local current_status
-  current_status=$(rds_get_instance_status "$db_instance_id") || return 1
+  current_status=$(rds_get_instance_status "${db_instance_id}") || return 1
   
-  if [ "$current_status" = "stopped" ]; then
-    log_warn "DB instance $db_instance_id is already stopped"
+  if [[ "${current_status}" = "stopped" ]]; then
+    log_warn "DB instance ${db_instance_id} is already stopped"
     return 0
-  elif [ "$current_status" != "available" ]; then
-    log_error "Cannot stop DB instance $db_instance_id from status: $current_status"
+  elif [[ "${current_status}" != "available" ]]; then
+    log_error "Cannot stop DB instance ${db_instance_id} from status: ${current_status}"
     return 1
   fi
 
@@ -150,27 +150,27 @@ cmd_stop() {
   fi
 
   log_info "Stopping RDS instance: ${db_instance_id}"
-  rds_stop_instance "$db_instance_id" || return 1
+  rds_stop_instance "${db_instance_id}" || return 1
   
   # Wait for it to be stopped
   log_info "Waiting for DB instance to stop (this may take several minutes)..."
-  rds_wait_for_instance_status "$db_instance_id" "stopped" "${AWSTOOLS_RDS_STOP_WAIT_TIMEOUT}"
+  rds_wait_for_instance_status "${db_instance_id}" "stopped" "${AWSTOOLS_RDS_STOP_WAIT_TIMEOUT}"
 }
 
 cmd_describe() {
-  local db_instance_id="${1:-$AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}"
-  if [ -z "$db_instance_id" ]; then
+  local db_instance_id="${1:-${AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}}"
+  if [[ -z "${db_instance_id}" ]]; then
     log_error "Usage: awstools rds describe <db-instance-identifier>"
     return 1
   fi
   log_info "Describing RDS instance: ${db_instance_id}"
   ensure_aws_ready
-  rds_describe_instance "$db_instance_id"
+  rds_describe_instance "${db_instance_id}"
 }
 
 cmd_connect() {
-  local db_instance_id="${1:-$AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}"
-  if [ -z "$db_instance_id" ]; then
+  local db_instance_id="${1:-${AWSTOOLS_RDS_DEFAULT_INSTANCE_ID}}"
+  if [[ -z "${db_instance_id}" ]]; then
     log_error "Usage: awstools rds connect <db-instance-identifier>"
     return 1
   fi
@@ -181,47 +181,47 @@ cmd_connect() {
 
   # Get RDS connection information
   local connection_info
-  connection_info=$(rds_get_connection_info "$db_instance_id") || return 1
+  connection_info=$(rds_get_connection_info "${db_instance_id}") || return 1
 
   local db_endpoint db_port db_engine db_name vpc_id
-  db_endpoint=$(echo "$connection_info" | jq -r '.Endpoint // empty')
-  db_port=$(echo "$connection_info" | jq -r '.Port // empty')
-  db_engine=$(echo "$connection_info" | jq -r '.Engine // empty')
-  db_name=$(echo "$connection_info" | jq -r '.DBName // empty')
-  vpc_id=$(echo "$connection_info" | jq -r '.VpcId // empty')
+  db_endpoint=$(echo "${connection_info}" | jq -r '.Endpoint // empty')
+  db_port=$(echo "${connection_info}" | jq -r '.Port // empty')
+  db_engine=$(echo "${connection_info}" | jq -r '.Engine // empty')
+  db_name=$(echo "${connection_info}" | jq -r '.DBName // empty')
+  vpc_id=$(echo "${connection_info}" | jq -r '.VpcId // empty')
 
-  if [ -z "$db_endpoint" ] || [ -z "$db_port" ]; then
-    log_error "Could not retrieve connection information for DB instance: $db_instance_id"
+  if [[ -z "${db_endpoint}" ]] || [[ -z "${db_port}" ]]; then
+    log_error "Could not retrieve connection information for DB instance: ${db_instance_id}"
     return 1
   fi
 
   log_info "Database details:"
-  log_info "  Endpoint: $db_endpoint"
-  log_info "  Port: $db_port"
-  log_info "  Engine: $db_engine"
-  [ -n "$db_name" ] && log_info "  Database: $db_name"
-  [ -n "$vpc_id" ] && log_info "  VPC: $vpc_id"
+  log_info "  Endpoint: ${db_endpoint}"
+  log_info "  Port: ${db_port}"
+  log_info "  Engine: ${db_engine}"
+  [[ -n "${db_name}" ]] && log_info "  Database: ${db_name}"
+  [[ -n "${vpc_id}" ]] && log_info "  VPC: ${vpc_id}"
 
   # Select bastion instance if not provided
-  local instance_id="${BASTION_INSTANCE_ID:-$AWSTOOLS_RDS_SSM_DEFAULT_BASTION_INSTANCE_ID}"
-  if [ -z "$instance_id" ]; then
+  local instance_id="${BASTION_INSTANCE_ID:-${AWSTOOLS_RDS_SSM_DEFAULT_BASTION_INSTANCE_ID}}"
+  if [[ -z "${instance_id}" ]]; then
     log_info ""
     log_info "Finding suitable bastion instances..."
-    rds_list_bastion_instances "$vpc_id"
+    rds_list_bastion_instances "${vpc_id}"
     
     echo ""
     read -r -p "Enter EC2 instance ID to use as bastion: " instance_id
     
-    if [ -z "$instance_id" ]; then
+    if [[ -z "${instance_id}" ]]; then
       log_error "No instance ID provided"
       return 1
     fi
   fi
 
   # Validate bastion instance
-  log_info "Validating bastion instance: $instance_id"
-  if ! rds_check_ssm_connectivity "$instance_id"; then
-    log_error "Instance $instance_id is not suitable for Session Manager tunneling"
+  log_info "Validating bastion instance: ${instance_id}"
+  if ! rds_check_ssm_connectivity "${instance_id}"; then
+    log_error "Instance ${instance_id} is not suitable for Session Manager tunneling"
     log_info "Ensure the instance has:"
     log_info "  1. SSM Agent installed and running"
     log_info "  2. Appropriate IAM role with SSM permissions"
@@ -229,34 +229,34 @@ cmd_connect() {
     return 1
   fi
 
-  log_info "✓ Instance $instance_id is ready for Session Manager"
+  log_info "✓ Instance ${instance_id} is ready for Session Manager"
 
   # Determine local port
-  local local_port="${TUNNEL_LOCAL_PORT:-$AWSTOOLS_RDS_SSM_DEFAULT_LOCAL_PORT_START}"
-  if [ -z "$local_port" ]; then
+  local local_port="${TUNNEL_LOCAL_PORT:-${AWSTOOLS_RDS_SSM_DEFAULT_LOCAL_PORT_START}}"
+  if [[ -z "${local_port}" ]]; then
     local_port=$(find_available_port "${AWSTOOLS_RDS_SSM_LOCAL_PORT_START}") || return 1
-    log_info "Using available local port: $local_port"
+    log_info "Using available local port: ${local_port}"
   else
-    log_info "Using specified local port: $local_port"
+    log_info "Using specified local port: ${local_port}"
   fi
 
   log_info ""
   log_info "=============================================="
   log_info "Session Manager Tunnel Setup"
   log_info "=============================================="
-  log_info "Local port: $local_port"
-  log_info "Target: $db_endpoint:$db_port"
-  log_info "Bastion: $instance_id"
+  log_info "Local port: ${local_port}"
+  log_info "Target: ${db_endpoint}:${db_port}"
+  log_info "Bastion: ${instance_id}"
   log_info ""
   log_info "After the tunnel is established, you can connect to:"
   log_info "  Host: localhost"
-  log_info "  Port: $local_port"
+  log_info "  Port: ${local_port}"
   log_info ""
   log_info "Starting tunnel (press Ctrl+C to stop)..."
   log_info "=============================================="
 
   # Start the tunnel
-  rds_start_ssm_tunnel "$instance_id" "$db_endpoint" "$db_port" "$local_port"
+  rds_start_ssm_tunnel "${instance_id}" "${db_endpoint}" "${db_port}" "${local_port}"
 }
 
 #--- Main Processing -----------------------------------------
@@ -268,14 +268,14 @@ set -- "${REMAINING_ARGS[@]}"
 
 # Get command
 COMMAND="${1:-}"
-if [ -z "$COMMAND" ]; then
+if [[ -z "${COMMAND}" ]]; then
   show_help
   exit 1
 fi
 shift || true
 
 # Execute command
-case "$COMMAND" in
+case "${COMMAND}" in
   list)
     cmd_list "$@"
     ;;
@@ -295,7 +295,7 @@ case "$COMMAND" in
     show_help
     ;;
   *)
-    log_error "Unknown command: $COMMAND"
+    log_error "Unknown command: ${COMMAND}"
     log_info "Run 'awstools rds help' for available commands"
     exit 1
     ;;

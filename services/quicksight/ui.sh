@@ -7,8 +7,8 @@ set -euo pipefail
 
 # Load service-specific libraries (dependencies managed by lib.sh)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib.sh"  # This also loads common libraries
-source "$SCRIPT_DIR/api.sh"
+source "${SCRIPT_DIR}/lib.sh"  # This also loads common libraries
+source "${SCRIPT_DIR}/api.sh"
 
 load_config "" "quicksight"
 
@@ -247,7 +247,7 @@ set -- "${REMAINING_ARGS[@]}"
 
 # Get command
 COMMAND="${1:-}"
-if [ -z "$COMMAND" ]; then
+if [[ -z "${COMMAND}" ]]; then
   show_help
   exit 1
 fi
