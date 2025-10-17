@@ -9,8 +9,8 @@ set -euo pipefail
 if [[ -z "${EC2_LIB_LOADED:-}" ]]; then
   # Determine script directory and base directory
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  BASE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-  COMMON_DIR="$BASE_DIR/common"
+  BASE_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+  COMMON_DIR="${BASE_DIR}/common"
 
   # Load common configuration and utilities only once
   if [[ -z "${AWS_TOOLS_CONFIG_LOADED:-}" ]]; then
@@ -39,8 +39,8 @@ fi
 # Validate EC2 instance ID format
 validate_instance_id() {
   local instance_id="$1"
-  if [[ ! "$instance_id" =~ ^i-[0-9a-f]{8,17}$ ]]; then
-    log_error "Invalid instance ID format: $instance_id"
+  if [[ ! "${instance_id}" =~ ^i-[0-9a-f]{8,17}$ ]]; then
+    log_error "Invalid instance ID format: ${instance_id}"
     return 1
   fi
 }
