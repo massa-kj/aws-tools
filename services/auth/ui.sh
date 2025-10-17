@@ -121,6 +121,10 @@ cmd_detect() {
       echo "No authentication method detected"
       return 1
       ;;
+    *)
+      echo "Unexpected authentication method: ${method}"
+      return 1
+      ;;
   esac
 }
 

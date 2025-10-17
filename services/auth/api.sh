@@ -23,9 +23,12 @@ login_assume() {
   local creds
   creds=$(aws sts assume-role --role-arn "${role_arn}" --role-session-name "auth-session")
 
-  export AWS_ACCESS_KEY_ID=$(jq -r '.Credentials.AccessKeyId' <<<"${creds}")
-  export AWS_SECRET_ACCESS_KEY=$(jq -r '.Credentials.SecretAccessKey' <<<"${creds}")
-  export AWS_SESSION_TOKEN=$(jq -r '.Credentials.SessionToken' <<<"${creds}")
+  AWS_ACCESS_KEY_ID=$(jq -r '.Credentials.AccessKeyId' <<<"${creds}")
+  export AWS_ACCESS_KEY_ID
+  AWS_SECRET_ACCESS_KEY=$(jq -r '.Credentials.SecretAccessKey' <<<"${creds}")
+  export AWS_SECRET_ACCESS_KEY
+  AWS_SESSION_TOKEN=$(jq -r '.Credentials.SessionToken' <<<"${creds}")
+  export AWS_SESSION_TOKEN
 }
 
 login_access() {
@@ -87,7 +90,15 @@ auth_list_profiles() {
     # Determine profile type
     if is_sso_profile "${profile}"; then
       profile_type="sso"
-      if [[ "$(auth_sso_status "${profile}" 2>/dev/null)" == "active" ]]; then
+      local sso_status
+      auth_sso_status "${profile}" >/dev/null 2>&1
+      local sso_result=$?
+      if [[ ${sso_result} -eq 0 ]]; then
+        sso_status="active"
+      else
+        sso_status="expired"
+      fi
+      if [[ "${sso_status}" == "active" ]]; then
         status_indicator=" ✓"
       else
         status_indicator=" (expired)"

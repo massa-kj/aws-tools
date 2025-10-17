@@ -154,7 +154,9 @@ get_profile_config() {
     return 1
   fi
   
-  if ! profile_exists "${profile_name}"; then
+  local profile_check
+  profile_check=$(profile_exists "${profile_name}")
+  if [[ -z "${profile_check}" ]]; then
     log_error "Profile '${profile_name}' does not exist"
     return 1
   fi
@@ -166,11 +168,26 @@ get_profile_config() {
   echo "${config_output}"
   
   # Additional SSO/Role information
-  if is_sso_profile "${profile_name}"; then
+  is_sso_profile "${profile_name}"
+  local sso_result=$?
+  if [[ ${sso_result} -eq 0 ]]; then
     echo ""
     echo "SSO Configuration:"
-    echo "  Start URL: $(aws configure get sso_start_url --profile "${profile_name}" 2>/dev/null || echo "Not configured")"
-    echo "  Account ID: $(aws configure get sso_account_id --profile "${profile_name}" 2>/dev/null || echo "Not configured")"
-    echo "  Role Name: $(aws configure get sso_role_name --profile "${profile_name}" 2>/dev/null || echo "Not configured")"
+    local start_url account_id role_name
+    start_url=$(aws configure get sso_start_url --profile "${profile_name}" 2>/dev/null)
+    if [[ -z "${start_url}" ]]; then
+      start_url="Not configured"
+    fi
+    account_id=$(aws configure get sso_account_id --profile "${profile_name}" 2>/dev/null)
+    if [[ -z "${account_id}" ]]; then
+      account_id="Not configured"
+    fi
+    role_name=$(aws configure get sso_role_name --profile "${profile_name}" 2>/dev/null)
+    if [[ -z "${role_name}" ]]; then
+      role_name="Not configured"
+    fi
+    echo "  Start URL: ${start_url}"
+    echo "  Account ID: ${account_id}"
+    echo "  Role Name: ${role_name}"
   fi
 }
