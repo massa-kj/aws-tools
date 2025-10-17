@@ -30,10 +30,10 @@ get_effective_profile() {
     echo "${AWSTOOLS_PROFILE_OVERRIDE%/}"
     return 0
   fi
-  
+
   # Load user config to get default profile
   load_user_config
-  
+
   # Use configured profile or fallback to "default", remove trailing slash
   local profile="${AWSTOOLS_PROFILE:-default}"
   echo "${profile%/}"
@@ -43,7 +43,7 @@ get_effective_profile() {
 get_profile_dir() {
   local profile="$1"
   load_user_config
-  
+
   # Check if AWSTOOLS_PROFILE_DIR is set
   if [[ -n "${AWSTOOLS_PROFILE_DIR:-}" ]]; then
     # Expand tilde if present
@@ -63,7 +63,7 @@ load_env_files_recursive() {
   if [[ ! -d "$dir" ]]; then
     return 0
   fi
-  
+
   # Find all .env files and sort them for consistent loading order
   while IFS= read -r -d '' env_file; do
     if [[ -f "$env_file" ]]; then

@@ -56,7 +56,7 @@ find_available_port() {
   local start_port="${1:-5432}"
   local max_attempts=50
   local port=$start_port
-  
+
   for ((i=0; i<max_attempts; i++)); do
     if ! command -v netstat >/dev/null 2>&1; then
       # If netstat is not available, try nc or ss
@@ -83,7 +83,7 @@ find_available_port() {
     fi
     port=$((port + 1))
   done
-  
+
   log_error "Could not find available port after $max_attempts attempts"
   return 1
 }
@@ -92,7 +92,7 @@ find_available_port() {
 parse_rds_endpoint() {
   local endpoint="$1"
   local parsed_info
-  
+
   # Extract hostname and port from endpoint
   if [[ "$endpoint" =~ ^(.+):([0-9]+)$ ]]; then
     parsed_info="{\"host\":\"${BASH_REMATCH[1]}\",\"port\":\"${BASH_REMATCH[2]}\"}"
@@ -100,8 +100,6 @@ parse_rds_endpoint() {
     # Assume default port based on engine type (will be handled by caller)
     parsed_info="{\"host\":\"$endpoint\",\"port\":\"\"}"
   fi
-  
+
   echo "$parsed_info"
 }
-
-

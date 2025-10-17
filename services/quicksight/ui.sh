@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #=============================================================
-# ui.sh - User Interface 
+# ui.sh - User Interface
 #=============================================================
 
 set -euo pipefail
@@ -82,7 +82,7 @@ cmd_list_target_analyses() {
 
   for analysis_info in "${MATCHED_ANALYSES[@]}"; do
     IFS='|' read -r analysis_name analysis_id created_time updated_time status <<< "$analysis_info"
-    
+
     echo "Name: $analysis_name"
     echo "ID: $analysis_id"
     echo "Status: $status"
@@ -99,7 +99,7 @@ cmd_list_target_datasets() {
   if ! all_datasets=$(get_all_datasets); then
     exit 1
   fi
-  
+
   if ! filter_target_datasets "$all_datasets"; then
     exit 1
   fi
@@ -127,7 +127,7 @@ cmd_export_analyses() {
   if ! all_analyses=$(get_all_analyses); then
     exit 1
   fi
-  
+
   local analysis_count
   analysis_count=$(echo "$all_analyses" | jq -r '.AnalysisSummaryList | length')
   log_info "Retrieved analyses count: $analysis_count"
@@ -138,7 +138,7 @@ cmd_export_analyses() {
   fi
 
   log_info "Target analyses count: ${#MATCHED_ANALYSES[@]}"
-  
+
   # Create export directory
   local export_dir
   export_dir=$(generate_export_dir_name "analysis")

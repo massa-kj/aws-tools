@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #=============================================================
-# ui.sh - User Interface 
+# ui.sh - User Interface
 #=============================================================
 
 set -euo pipefail
@@ -79,14 +79,14 @@ cmd_start() {
     log_error "Usage: awstools ec2 start <instance-id>"
     return 1
   fi
-  
+
   log_info "Starting EC2 instance: ${instance_id}"
   ensure_aws_ready
-  
+
   # Check current state
   local current_state
   current_state=$(ec2_get_instance_state "${instance_id}") || return 1
-  
+
   if [[ "${current_state}" = "running" ]]; then
     log_warn "Instance ${instance_id} is already running"
     return 0
@@ -94,10 +94,10 @@ cmd_start() {
     log_error "Cannot start instance ${instance_id} from state: ${current_state}"
     return 1
   fi
-  
+
   # Start the instance
   ec2_start_instance "${instance_id}" || return 1
-  
+
   # Wait for it to be running
   log_info "Waiting for instance to start..."
   ec2_wait_for_instance_state "${instance_id}" "running" 180
@@ -115,7 +115,7 @@ cmd_stop() {
   # Check current state
   local current_state
   current_state=$(ec2_get_instance_state "${instance_id}") || return 1
-  
+
   if [[ "${current_state}" = "stopped" ]]; then
     log_warn "Instance ${instance_id} is already stopped"
     return 0
@@ -132,7 +132,7 @@ cmd_stop() {
 
   log_info "Stopping EC2 instance: ${instance_id}"
   ec2_stop_instance "${instance_id}" || return 1
-  
+
   # Wait for it to be stopped
   log_info "Waiting for instance to stop..."
   ec2_wait_for_instance_state "${instance_id}" "stopped" 180

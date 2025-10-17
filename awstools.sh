@@ -21,13 +21,13 @@ source "${COMMON_DIR}/discovery.sh"
 execute_global_command() {
   local cmd="$1"
   shift || true
-  
+
   local cmd_script="${COMMANDS_DIR}/${cmd}.sh"
   if [ ! -f "$cmd_script" ]; then
     log_error "Global command script not found: ${cmd_script}"
     exit 1
   fi
-  
+
   log_debug "Executing global command: ${cmd}"
   exec "$cmd_script" "$@"
 }

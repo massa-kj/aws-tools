@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #=============================================================
-# ui.sh - Authentication User Interface 
+# ui.sh - Authentication User Interface
 #=============================================================
 
 set -euo pipefail
@@ -67,12 +67,12 @@ parse_options() {
 
 cmd_sso_login() {
   local profile_name="${1:-${AWS_PROFILE}}"
-  
+
   if [[ -z "${profile_name}" ]]; then
     log_error "Usage: awstools auth login-sso <profile-name>"
     return 1
   fi
-  
+
   log_info "Logging in with SSO profile: ${profile_name}"
 
   if login_sso "${profile_name}"; then
@@ -86,12 +86,12 @@ cmd_sso_login() {
 
 cmd_detect() {
   log_debug "Detecting authentication method"
-  
+
   local method
   method=$(detect_auth_method)
-  
+
   echo "Detected authentication method: ${method}"
-  
+
   case "${method}" in
     env-vars*)
       echo "Using environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)"
@@ -135,12 +135,12 @@ cmd_list_profiles() {
 
 cmd_profile_info() {
   local profile_name="${1:-}"
-  
+
   if [[ -z "${profile_name}" ]]; then
     log_error "Usage: awstools auth profile-info <profile-name>"
     return 1
   fi
-  
+
   log_debug "Getting profile information for: ${profile_name}"
   get_profile_config "${profile_name}"
 }

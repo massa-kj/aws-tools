@@ -25,7 +25,7 @@ ec2_start_instance() {
   fi
 
   validate_instance_id "$instance_id" || return 1
-  
+
   log_info "Starting instance: $instance_id"
   aws_exec ec2 start-instances --instance-ids "$instance_id" >/dev/null
   log_info "Start command sent successfully."
@@ -40,7 +40,7 @@ ec2_stop_instance() {
   fi
 
   validate_instance_id "$instance_id" || return 1
-  
+
   log_info "Stopping instance: $instance_id"
   aws_exec ec2 stop-instances --instance-ids "$instance_id" >/dev/null
   log_info "Stop command sent successfully."
@@ -55,7 +55,7 @@ ec2_describe_instance() {
   fi
 
   validate_instance_id "$instance_id" || return 1
-  
+
   log_debug "Fetching detailed information for instance: $instance_id"
   aws_exec ec2 describe-instances \
     --instance-ids "$instance_id" \
@@ -75,7 +75,7 @@ ec2_describe_instance() {
 ec2_get_instance_state() {
   local instance_id="$1"
   validate_instance_id "$instance_id" || return 1
-  
+
   log_debug "Getting state for instance: $instance_id"
   aws_exec ec2 describe-instances \
     --instance-ids "$instance_id" \
@@ -88,26 +88,26 @@ ec2_wait_for_instance_state() {
   local instance_id="$1"
   local target_state="$2"
   local timeout="${3:-300}"  # 5 minutes default
-  
+
   validate_instance_id "$instance_id" || return 1
-  
+
   log_info "Waiting for instance $instance_id to reach state: $target_state (timeout: ${timeout}s)"
-  
+
   local elapsed=0
   while [ $elapsed -lt $timeout ]; do
     local current_state
     current_state=$(ec2_get_instance_state "$instance_id")
-    
+
     if [ "$current_state" = "$target_state" ]; then
       log_info "Instance $instance_id is now in state: $target_state"
       return 0
     fi
-    
+
     log_debug "Current state: $current_state, waiting..."
     sleep 10
     elapsed=$((elapsed + 10))
   done
-  
+
   log_error "Timeout waiting for instance $instance_id to reach state $target_state"
   return 1
 }

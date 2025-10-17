@@ -39,7 +39,7 @@ create_default_config() {
   fi
 
   log_info "Creating default configuration file: $USER_CONFIG_FILE"
-  
+
   cat > "$USER_CONFIG_FILE" << 'EOF'
 # AWS Tools Configuration File
 # This file contains user-specific configuration for awstools

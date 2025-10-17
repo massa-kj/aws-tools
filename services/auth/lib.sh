@@ -48,7 +48,7 @@ detect_auth_method() {
     fi
     return 0
   fi
-  
+
   # Check AWS_PROFILE
   if [[ -n "${AWS_PROFILE:-}" ]]; then
     if aws configure get sso_start_url --profile "${AWS_PROFILE}" >/dev/null 2>&1; then
@@ -60,19 +60,19 @@ detect_auth_method() {
     fi
     return 0
   fi
-  
+
   # Check instance metadata (EC2 instance profile)
   if curl -sf --max-time 2 http://169.254.169.254/latest/meta-data/iam/security-credentials/ >/dev/null 2>&1; then
     echo "instance-profile"
     return 0
   fi
-  
+
   # Check for web identity token (EKS, etc.)
   if [[ -n "${AWS_WEB_IDENTITY_TOKEN_FILE:-}" && -n "${AWS_ROLE_ARN:-}" ]]; then
     echo "web-identity"
     return 0
   fi
-  
+
   # Default profile fallback
   if aws configure list-profiles 2>/dev/null | grep -q "^default$"; then
     if aws configure get sso_start_url --profile default >/dev/null 2>&1; then
@@ -84,7 +84,7 @@ detect_auth_method() {
     fi
     return 0
   fi
-  
+
   echo "unknown"
   return 1
 }
@@ -120,12 +120,12 @@ detect_auth_mode() {
 #
 profile_exists() {
   local profile_name="$1"
-  
+
   if [[ -z "${profile_name}" ]]; then
     log_error "Profile name is required"
     return 1
   fi
-  
+
   aws configure list-profiles 2>/dev/null | grep "^${profile_name}$"
 }
 
@@ -134,12 +134,12 @@ profile_exists() {
 #
 is_sso_profile() {
   local profile_name="$1"
-  
+
   if [[ -z "${profile_name}" ]]; then
     log_error "Profile name is required"
     return 1
   fi
-  
+
   aws configure get sso_account_id --profile "${profile_name}" >/dev/null 2>&1
 }
 
@@ -148,25 +148,25 @@ is_sso_profile() {
 #
 get_profile_config() {
   local profile_name="$1"
-  
+
   if [[ -z "${profile_name}" ]]; then
     log_error "Profile name is required"
     return 1
   fi
-  
+
   local profile_check
   profile_check=$(profile_exists "${profile_name}")
   if [[ -z "${profile_check}" ]]; then
     log_error "Profile '${profile_name}' does not exist"
     return 1
   fi
-  
+
   local config_output
   config_output=$(aws configure list --profile "${profile_name}" 2>/dev/null)
-  
+
   echo "Profile Configuration: ${profile_name}"
   echo "${config_output}"
-  
+
   # Additional SSO/Role information
   is_sso_profile "${profile_name}"
   local sso_result=$?

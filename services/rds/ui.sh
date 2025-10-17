@@ -98,14 +98,14 @@ cmd_start() {
     log_error "Usage: awstools rds start <db-instance-identifier>"
     return 1
   fi
-  
+
   log_info "Starting RDS instance: ${db_instance_id}"
   ensure_aws_ready
-  
+
   # Check current status
   local current_status
   current_status=$(rds_get_instance_status "${db_instance_id}") || return 1
-  
+
   if [[ "${current_status}" = "available" ]]; then
     log_warn "DB instance ${db_instance_id} is already available"
     return 0
@@ -113,10 +113,10 @@ cmd_start() {
     log_error "Cannot start DB instance ${db_instance_id} from status: ${current_status}"
     return 1
   fi
-  
+
   # Start the instance
   rds_start_instance "${db_instance_id}" || return 1
-  
+
   # Wait for it to be available
   log_info "Waiting for DB instance to be available (this may take several minutes)..."
   rds_wait_for_instance_status "${db_instance_id}" "available" "${AWSTOOLS_RDS_START_WAIT_TIMEOUT}"
@@ -134,7 +134,7 @@ cmd_stop() {
   # Check current status
   local current_status
   current_status=$(rds_get_instance_status "${db_instance_id}") || return 1
-  
+
   if [[ "${current_status}" = "stopped" ]]; then
     log_warn "DB instance ${db_instance_id} is already stopped"
     return 0
@@ -151,7 +151,7 @@ cmd_stop() {
 
   log_info "Stopping RDS instance: ${db_instance_id}"
   rds_stop_instance "${db_instance_id}" || return 1
-  
+
   # Wait for it to be stopped
   log_info "Waiting for DB instance to stop (this may take several minutes)..."
   rds_wait_for_instance_status "${db_instance_id}" "stopped" "${AWSTOOLS_RDS_STOP_WAIT_TIMEOUT}"
@@ -208,10 +208,10 @@ cmd_connect() {
     log_info ""
     log_info "Finding suitable bastion instances..."
     rds_list_bastion_instances "${vpc_id}"
-    
+
     echo ""
     read -r -p "Enter EC2 instance ID to use as bastion: " instance_id
-    
+
     if [[ -z "${instance_id}" ]]; then
       log_error "No instance ID provided"
       return 1

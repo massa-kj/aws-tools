@@ -6,16 +6,16 @@
 # ```sh
 # # Load logger.sh from the same directory
 # source "$(dirname "$0")/logger.sh"
-# 
+#
 # # --- File output path (empty to disable file output) ---
 # AWSTOOLS_LOG_FILE="./example.log"
-# 
+#
 # # --- Basic output ---
 # log_debug "This is debug info"
 # log_info  "Starting process..."
 # log_warn  "Low disk space"
 # log_error "Connection failed"
-# 
+#
 # # --- Color override output ---
 # log_info --color="$COLOR_GREEN"  "✔ All checks passed"
 # log_info --color="$COLOR_MAGENTA" "Processing data..."

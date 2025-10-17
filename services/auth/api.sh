@@ -47,12 +47,12 @@ auth_sso_status() {
     log_error "Usage: auth_sso_status <profile-name>"
     return 1
   fi
-  
+
   if ! is_sso_profile "${profile_name}"; then
     log_error "Profile '${profile_name}' is not configured for SSO"
     return 1
   fi
-  
+
   # Try to get caller identity with the SSO profile
   if aws sts get-caller-identity --profile "${profile_name}" >/dev/null 2>&1; then
     echo "active"
@@ -68,25 +68,25 @@ auth_sso_status() {
 #
 auth_list_profiles() {
   log_debug "Listing available AWS profiles"
-  
+
   local profiles
   if ! profiles=$(aws configure list-profiles 2>/dev/null); then
     log_error "Failed to list profiles"
     return 1
   fi
-  
+
   if [[ -z "${profiles}" ]]; then
     log_warn "No AWS profiles configured"
     return 0
   fi
-  
+
   echo "Available AWS Profiles:"
   echo "======================="
-  
+
   while IFS= read -r profile; do
     local profile_type="accesskey"
     local status_indicator=""
-    
+
     # Determine profile type
     if is_sso_profile "${profile}"; then
       profile_type="sso"
@@ -104,16 +104,16 @@ auth_list_profiles() {
         status_indicator=" (expired)"
       fi
     fi
-    
+
     # Mark current profile
     local current_marker=""
     if [[ "${AWS_PROFILE:-}" == "${profile}" ]]; then
       current_marker=" *"
     fi
-    
+
     printf "  %-20s [%-11s]%s%s\n" "${profile}" "${profile_type}" "${status_indicator}" "${current_marker}"
   done <<< "${profiles}"
-  
+
   echo ""
   echo "Legend: * = current profile, ✓ = active SSO session"
 }

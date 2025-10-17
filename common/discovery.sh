@@ -70,7 +70,7 @@ service_exists() {
 get_service_info() {
   local service="$1"
   local manifest_file="${DISCOVERY_SERVICES_DIR}/${service}/manifest.sh"
-  
+
   if [[ -f "$manifest_file" ]]; then
     source "$manifest_file"
     echo "Name: $SERVICE_NAME"
