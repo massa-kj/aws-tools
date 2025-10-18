@@ -26,6 +26,8 @@ Available commands:
   export-datasets         Export QuickSight datasets definition
   export-analyses         Export QuickSight analyses definition
   export-all              Export QuickSight datasets & analyses definition
+  manage-analyses         Create/update QuickSight analyses from JSON files
+  manage-datasets         Create/update QuickSight datasets from JSON files
   help                    Show this help
 
 Options:
@@ -238,6 +240,138 @@ cmd_export_all() {
   fi
 }
 
+manage_analyses() {
+  # Option defaults
+  local TARGET_FILE=""
+  local TARGET_DIR=""
+  local OPERATION="upsert"
+  local UPDATE_PERMISSIONS="false"
+  local DRY_RUN="false"
+  local SKIP_CONFIRMATION="false"
+
+  # Parse options for manage-analyses
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -f|--file)
+        TARGET_FILE="$2"; shift 2;;
+      -d|--dir)
+        TARGET_DIR="$2"; shift 2;;
+      -o|--operation)
+        OPERATION="$2"; shift 2;;
+      -p|--permissions)
+        UPDATE_PERMISSIONS="true"; shift;;
+      -n|--dry-run)
+        DRY_RUN="true"; shift;;
+      --yes|-y)
+        SKIP_CONFIRMATION="true"; shift;;
+      --help|-h)
+        cat <<'EOF'
+Usage: awstools quicksight manage-analyses [options]
+
+Options:
+  -f, --file FILE       Process a single JSON file
+  -d, --dir DIR         Batch process JSON files in directory
+  -o, --operation OP    Specify operation (create|update|upsert)
+  -p, --permissions     Also update permissions (if permissions file exists)
+  -n, --dry-run         Show execution plan without actual execution
+  --yes                 Skip confirmation prompts
+EOF
+        return 0;;
+      *)
+        log_error "Unknown option: $1"; return 1;;
+    esac
+  done
+
+  if [[ -z "$TARGET_FILE" && -z "$TARGET_DIR" ]]; then
+    log_error "Please specify file (-f) or directory (-d)"
+    return 1
+  fi
+  if [[ -n "$TARGET_FILE" && -n "$TARGET_DIR" ]]; then
+    log_error "Cannot specify both file (-f) and directory (-d)"
+    return 1
+  fi
+
+  case $OPERATION in
+    create|update|upsert) ;;
+    *) log_error "Invalid operation: $OPERATION"; return 1;;
+  esac
+
+  # Ensure AWS is ready
+  ensure_aws_ready
+
+  if [[ -n "$TARGET_FILE" ]]; then
+    process_analysis_json "$TARGET_FILE" "$OPERATION" "$DRY_RUN" "$UPDATE_PERMISSIONS" "$SKIP_CONFIRMATION"
+  else
+    process_multiple_analyses "$TARGET_DIR" "$OPERATION" "$DRY_RUN" "$UPDATE_PERMISSIONS"
+  fi
+}
+
+manage_datasets() {
+  # Option defaults
+  local TARGET_FILE=""
+  local TARGET_DIR=""
+  local OPERATION="upsert"
+  local UPDATE_PERMISSIONS="false"
+  local DRY_RUN="false"
+  local SKIP_CONFIRMATION="false"
+
+  # Parse options for manage-datasets
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -f|--file)
+        TARGET_FILE="$2"; shift 2;;
+      -d|--dir)
+        TARGET_DIR="$2"; shift 2;;
+      -o|--operation)
+        OPERATION="$2"; shift 2;;
+      -p|--permissions)
+        UPDATE_PERMISSIONS="true"; shift;;
+      -n|--dry-run)
+        DRY_RUN="true"; shift;;
+      --yes|-y)
+        SKIP_CONFIRMATION="true"; shift;;
+      --help|-h)
+        cat <<'EOF'
+Usage: awstools quicksight manage-datasets [options]
+
+Options:
+  -f, --file FILE       Process a single JSON file
+  -d, --dir DIR         Batch process JSON files in directory
+  -o, --operation OP    Specify operation (create|update|upsert)
+  -p, --permissions     Also update permissions (if permissions file exists)
+  -n, --dry-run         Show execution plan without actual execution
+  --yes                 Skip confirmation prompts
+EOF
+        return 0;;
+      *)
+        log_error "Unknown option: $1"; return 1;;
+    esac
+  done
+
+  if [[ -z "$TARGET_FILE" && -z "$TARGET_DIR" ]]; then
+    log_error "Please specify file (-f) or directory (-d)"
+    return 1
+  fi
+  if [[ -n "$TARGET_FILE" && -n "$TARGET_DIR" ]]; then
+    log_error "Cannot specify both file (-f) and directory (-d)"
+    return 1
+  fi
+
+  case $OPERATION in
+    create|update|upsert) ;;
+    *) log_error "Invalid operation: $OPERATION"; return 1;;
+  esac
+
+  # Ensure AWS is ready
+  ensure_aws_ready
+
+  if [[ -n "$TARGET_FILE" ]]; then
+    process_dataset_json "$TARGET_FILE" "$OPERATION" "$DRY_RUN" "$UPDATE_PERMISSIONS" "$SKIP_CONFIRMATION"
+  else
+    process_multiple_datasets "$TARGET_DIR" "$OPERATION" "$DRY_RUN" "$UPDATE_PERMISSIONS"
+  fi
+}
+
 #--- Main Processing -----------------------------------------
 
 # Parse options
@@ -269,6 +403,12 @@ case "$COMMAND" in
     ;;
   export-all)
     cmd_export_all "$@"
+    ;;
+  manage-analyses)
+    manage_analyses "$@"
+    ;;
+  manage-datasets)
+    manage_datasets "$@"
     ;;
   help|--help|-h)
     show_help

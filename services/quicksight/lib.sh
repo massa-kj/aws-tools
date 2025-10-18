@@ -331,3 +331,654 @@ generate_export_dir_name() {
     local type="$1"
     echo "quicksight-${type}-export-$(date +%Y%m%d-%H%M%S)"
 }
+
+# =============================================================
+# Analysis creation / update helpers moved from legacy manager
+# =============================================================
+
+extract_analysis_params() {
+    local json_file="$1"
+    local temp_dir="$2"
+
+    jq '.Analysis | del(.Arn, .CreatedTime, .LastUpdatedTime, .Status)' "$json_file" > "$temp_dir/create_params.json"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+    echo "$temp_dir/create_params.json"
+}
+
+extract_analysis_definition() {
+    local definition_file="$1"
+    local temp_dir="$2"
+
+    if [ ! -f "$definition_file" ]; then
+        echo "null"
+        return 0
+    fi
+
+    jq '.Definition // {}' "$definition_file" > "$temp_dir/definition.json"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+    echo "$temp_dir/definition.json"
+}
+
+check_analysis_exists() {
+    local analysis_id="$1"
+
+    if aws_exec quicksight describe-analysis --aws-account-id "$ACCOUNT_ID" --analysis-id "$analysis_id" >/dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+create_analysis() {
+    local params_file="$1"
+    local definition_file="$2"
+    local dry_run="$3"
+
+    local analysis_id analysis_name
+    analysis_id=$(jq -r '.AnalysisId' "$params_file")
+    analysis_name=$(jq -r '.Name' "$params_file")
+
+    log_info "Creating analysis: $analysis_name (ID: $analysis_id)"
+
+    if [ "$dry_run" = "true" ]; then
+        log_warn "[DRY RUN] Will not perform actual creation"
+        log_debug "Planned: aws quicksight create-analysis --aws-account-id $ACCOUNT_ID --analysis-id $analysis_id --name '$analysis_name' ..."
+        return 0
+    fi
+
+    local args=(quicksight create-analysis --aws-account-id "$ACCOUNT_ID" --analysis-id "$analysis_id" --name "$analysis_name" --output json)
+
+    if [ -f "$definition_file" ] && [ "$(jq -r '. | length' "$definition_file" 2>/dev/null)" != "0" ]; then
+        args+=(--definition "file://$definition_file")
+        log_debug "Using definition file: $definition_file"
+    fi
+
+    local theme_arn
+    theme_arn=$(jq -r '.ThemeArn // empty' "$params_file")
+    if [ -n "$theme_arn" ]; then
+        args+=(--theme-arn "$theme_arn")
+    fi
+
+    if output=$(aws_exec "${args[@]}" 2>/dev/null); then
+        log_info "✓ Analysis creation successful"
+        log_debug "Result: $output"
+        return 0
+    else
+        log_error "✗ Analysis creation failed"
+        return 1
+    fi
+}
+
+update_analysis() {
+    local params_file="$1"
+    local definition_file="$2"
+    local dry_run="$3"
+
+    local analysis_id analysis_name
+    analysis_id=$(jq -r '.AnalysisId' "$params_file")
+    analysis_name=$(jq -r '.Name' "$params_file")
+
+    log_info "Updating analysis: $analysis_name (ID: $analysis_id)"
+
+    if [ "$dry_run" = "true" ]; then
+        log_warn "[DRY RUN] Will not perform actual update"
+        log_debug "Planned: aws quicksight update-analysis --aws-account-id $ACCOUNT_ID --analysis-id $analysis_id --name '$analysis_name' ..."
+        return 0
+    fi
+
+    local args=(quicksight update-analysis --aws-account-id "$ACCOUNT_ID" --analysis-id "$analysis_id" --name "$analysis_name" --output json)
+
+    if [ -f "$definition_file" ] && [ "$(jq -r '. | length' "$definition_file" 2>/dev/null)" != "0" ]; then
+        args+=(--definition "file://$definition_file")
+        log_debug "Using definition file: $definition_file"
+    fi
+
+    local theme_arn
+    theme_arn=$(jq -r '.ThemeArn // empty' "$params_file")
+    if [ -n "$theme_arn" ]; then
+        args+=(--theme-arn "$theme_arn")
+    fi
+
+    if output=$(aws_exec "${args[@]}" 2>/dev/null); then
+        log_info "✓ Analysis update successful"
+        log_debug "Result: $output"
+        return 0
+    else
+        log_error "✗ Analysis update failed"
+        return 1
+    fi
+}
+
+update_analysis_permissions() {
+    local analysis_id="$1"
+    local permissions_file="$2"
+    local dry_run="$3"
+
+    if [ ! -f "$permissions_file" ]; then
+        log_warn "Permissions file not found, skipping: $permissions_file"
+        return 0
+    fi
+
+    log_info "Updating analysis permissions: $analysis_id"
+
+    if [ "$dry_run" = "true" ]; then
+        log_warn "[DRY RUN] Will not perform actual permission update"
+        return 0
+    fi
+
+    local permissions
+    permissions=$(jq -c '.Permissions // []' "$permissions_file" 2>/dev/null)
+
+    if [ "$permissions" = "[]" ] || [ "$permissions" = "null" ]; then
+        log_warn "No permissions configuration found, skipping"
+        return 0
+    fi
+
+    if aws_exec quicksight update-analysis-permissions --aws-account-id "$ACCOUNT_ID" --analysis-id "$analysis_id" --grant-permissions "$permissions" >/dev/null 2>&1; then
+        log_info "✓ Permissions update successful"
+        return 0
+    else
+        log_error "✗ Permissions update failed"
+        return 1
+    fi
+}
+
+show_single_analysis_info() {
+    local json_file="$1"
+    local operation="$2"
+
+    log_info "=== Processing Target Information ==="
+    log_info "File: $json_file"
+
+    local analysis_id analysis_name
+    analysis_id=$(jq -r '.Analysis.AnalysisId // "N/A"' "$json_file" 2>/dev/null)
+    analysis_name=$(jq -r '.Analysis.Name // "N/A"' "$json_file" 2>/dev/null)
+
+    log_debug "Analysis ID: $analysis_id"
+    log_debug "Analysis Name: $analysis_name"
+    log_debug "Operation to execute: $operation"
+}
+
+show_multiple_analyses_info() {
+    local target_dir="$1"
+    local operation="$2"
+    shift 2
+    local json_files=("$@")
+
+    log_info "=== Batch Processing Target Information ==="
+    log_info "Target Directory: $target_dir"
+    log_debug "Operation to execute: $operation"
+    log_info "Number of files to process: ${#json_files[@]}"
+
+    log_info "Processing target list:"
+    local count=1
+    for json_file in "${json_files[@]}"; do
+        local analysis_id analysis_name
+        analysis_id=$(jq -r '.Analysis.AnalysisId // "N/A"' "$json_file" 2>/dev/null)
+        analysis_name=$(jq -r '.Analysis.Name // "N/A"' "$json_file" 2>/dev/null)
+
+        printf "%2d. %s\n" "$count" "$(basename "$json_file")"
+        log_debug "    ID: $analysis_id"
+        log_debug "    Name: $analysis_name"
+        echo
+        ((count++))
+    done
+}
+
+process_analysis_json() {
+    local json_file="$1"
+    local operation="$2"  # create|update|upsert
+    local dry_run="$3"
+    local update_permissions_flag="$4"
+    local skip_confirmation="$5"
+
+    if [ ! -f "$json_file" ]; then
+        log_error "File not found: $json_file"
+        return 1
+    fi
+
+    if [ "$skip_confirmation" != "true" ]; then
+        show_single_analysis_info "$json_file" "$operation"
+        if [ "$dry_run" != "true" ]; then
+            if ! confirm_action "Will execute $operation operation on the above analysis."; then
+                return 1
+            fi
+        fi
+    fi
+
+    log_info "=== Analysis Processing Started: $(basename "$json_file") ==="
+
+    local temp_dir
+    temp_dir=$(mktemp -d)
+    trap 'rm -rf "$temp_dir"' EXIT
+
+    local params_file
+    if ! params_file=$(extract_analysis_params "$json_file" "$temp_dir"); then
+        log_error "Failed to extract parameters"
+        return 1
+    fi
+
+    local definition_file=""
+    local base_dir
+    base_dir=$(dirname "$json_file")
+    local base_name
+    base_name=$(basename "$json_file" .json)
+
+    local potential_def_file="$base_dir/../definitions/${base_name}-definition.json"
+    if [ -f "$potential_def_file" ]; then
+        definition_file=$(extract_analysis_definition "$potential_def_file" "$temp_dir")
+        log_debug "Definition file detected: $potential_def_file"
+    else
+        if jq -e '.Definition' "$json_file" >/dev/null 2>&1; then
+            jq '.Definition' "$json_file" > "$temp_dir/definition.json"
+            definition_file="$temp_dir/definition.json"
+            log_debug "Using definition from JSON"
+        fi
+    fi
+
+    local analysis_id analysis_name
+    analysis_id=$(jq -r '.AnalysisId' "$params_file")
+    analysis_name=$(jq -r '.Name' "$params_file")
+
+    if [ -z "$analysis_id" ] || [ "$analysis_id" = "null" ]; then
+        log_error "AnalysisId not found"
+        return 1
+    fi
+
+    log_debug "Target analysis: $analysis_name (ID: $analysis_id)"
+
+    local actual_operation="$operation"
+    if [ "$operation" = "upsert" ]; then
+        if check_analysis_exists "$analysis_id"; then
+            actual_operation="update"
+            log_warn "Existing analysis detected, switching to update mode"
+        else
+            actual_operation="create"
+            log_warn "New analysis, switching to create mode"
+        fi
+    fi
+
+    case $actual_operation in
+        create)
+            if check_analysis_exists "$analysis_id"; then
+                log_error "Analysis already exists: $analysis_id"
+                log_warn "Use --operation update to update it"
+                return 1
+            fi
+            create_analysis "$params_file" "$definition_file" "$dry_run"
+            ;;
+        update)
+            if ! check_analysis_exists "$analysis_id"; then
+                log_error "Analysis does not exist: $analysis_id"
+                log_warn "Use --operation create to create it"
+                return 1
+            fi
+            update_analysis "$params_file" "$definition_file" "$dry_run"
+            ;;
+        *)
+            log_error "Unknown operation: $actual_operation"
+            return 1
+            ;;
+    esac
+
+    local main_result=$?
+
+    if [ $main_result -eq 0 ] && [ "$update_permissions_flag" = "true" ]; then
+        local permissions_file="$base_dir/../permissions/${base_name}-permissions.json"
+        update_analysis_permissions "$analysis_id" "$permissions_file" "$dry_run"
+    fi
+
+    if [ $main_result -eq 0 ]; then
+        log_info "=== Processing Complete: Success ==="
+    else
+        log_error "=== Processing Complete: Error ==="
+    fi
+
+    return $main_result
+}
+
+process_multiple_analyses() {
+    local target_dir="$1"
+    local operation="$2"
+    local dry_run="$3"
+    local update_permissions_flag="$4"
+
+    local json_files=()
+    while IFS= read -r -d '' file; do
+        if [[ "$file" != *"-permissions.json" ]] && [[ "$file" != *"-definition.json" ]]; then
+            json_files+=("$file")
+        fi
+    done < <(find "$target_dir" -name "*.json" -print0 2>/dev/null)
+
+    if [ ${#json_files[@]} -eq 0 ]; then
+        log_error "No JSON files found"
+        return 1
+    fi
+
+    show_multiple_analyses_info "$target_dir" "$operation" "${json_files[@]}"
+
+    if [ "$dry_run" != "true" ]; then
+        if ! confirm_action "Will batch execute $operation operation on the above ${#json_files[@]} analyses."; then
+            return 1
+        fi
+    fi
+
+    log_info "=== Batch Processing of Multiple Analyses Started ==="
+
+    local success_count=0
+    local error_count=0
+
+    for json_file in "${json_files[@]}"; do
+        echo
+        if process_analysis_json "$json_file" "$operation" "$dry_run" "$update_permissions_flag" "true"; then
+            ((success_count++))
+        else
+            ((error_count++))
+        fi
+    done
+
+    echo
+    log_info "=== Batch Processing Complete ==="
+    log_info "Successful: $success_count items"
+    [ $error_count -gt 0 ] && log_error "Errors: $error_count items"
+
+    return $error_count
+}
+
+# =============================================================
+# Dataset creation / update helpers moved from legacy manager
+# =============================================================
+
+extract_dataset_params() {
+    local json_file="$1"
+    local temp_dir="$2"
+
+    jq '.DataSet | del(.Arn, .CreatedTime, .LastUpdatedTime, .OutputColumns, .ConsumedSpiceCapacityInBytes)' "$json_file" > "$temp_dir/create_params.json"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+    echo "$temp_dir/create_params.json"
+}
+
+check_dataset_exists() {
+    local dataset_id="$1"
+
+    if aws_exec quicksight describe-data-set --aws-account-id "$ACCOUNT_ID" --data-set-id "$dataset_id" >/dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+create_dataset() {
+    local params_file="$1"
+    local dry_run="$2"
+
+    local dataset_id dataset_name
+    dataset_id=$(jq -r '.DataSetId' "$params_file")
+    dataset_name=$(jq -r '.Name' "$params_file")
+
+    log_info "Creating dataset: $dataset_name (ID: $dataset_id)"
+
+    if [ "$dry_run" = "true" ]; then
+        log_warn "[DRY RUN] Will not perform actual creation"
+        log_debug "Planned: aws quicksight create-data-set --aws-account-id $ACCOUNT_ID --data-set-id $dataset_id --cli-input-json file://$params_file"
+        return 0
+    fi
+
+    if output=$(aws_exec quicksight create-data-set --aws-account-id "$ACCOUNT_ID" --data-set-id "$dataset_id" --cli-input-json "file://$params_file" --output json 2>/dev/null); then
+        log_info "✓ Dataset creation successful"
+        log_debug "Result: $output"
+        return 0
+    else
+        log_error "✗ Dataset creation failed"
+        return 1
+    fi
+}
+
+update_dataset() {
+    local params_file="$1"
+    local dry_run="$2"
+
+    local dataset_id dataset_name
+    dataset_id=$(jq -r '.DataSetId' "$params_file")
+    dataset_name=$(jq -r '.Name' "$params_file")
+
+    log_info "Updating dataset: $dataset_name (ID: $dataset_id)"
+
+    if [ "$dry_run" = "true" ]; then
+        log_warn "[DRY RUN] Will not perform actual update"
+        log_debug "Planned: aws quicksight update-data-set --aws-account-id $ACCOUNT_ID --data-set-id $dataset_id --cli-input-json file://$params_file"
+        return 0
+    fi
+
+    if output=$(aws_exec quicksight update-data-set --aws-account-id "$ACCOUNT_ID" --data-set-id "$dataset_id" --cli-input-json "file://$params_file" --output json 2>/dev/null); then
+        log_info "✓ Dataset update successful"
+        log_debug "Result: $output"
+        return 0
+    else
+        log_error "✗ Dataset update failed"
+        return 1
+    fi
+}
+
+update_dataset_permissions() {
+    local dataset_id="$1"
+    local permissions_file="$2"
+    local dry_run="$3"
+
+    if [ ! -f "$permissions_file" ]; then
+        log_warn "Permissions file not found, skipping: $permissions_file"
+        return 0
+    fi
+
+    log_info "Updating dataset permissions: $dataset_id"
+
+    if [ "$dry_run" = "true" ]; then
+        log_warn "[DRY RUN] Will not perform actual permission update"
+        return 0
+    fi
+
+    local permissions
+    permissions=$(jq -c '.Permissions // []' "$permissions_file" 2>/dev/null)
+
+    if [ "$permissions" = "[]" ] || [ "$permissions" = "null" ]; then
+        log_warn "No permissions configuration found, skipping"
+        return 0
+    fi
+
+    if aws_exec quicksight update-data-set-permissions --aws-account-id "$ACCOUNT_ID" --data-set-id "$dataset_id" --grant-permissions "$permissions" >/dev/null 2>&1; then
+        log_info "✓ Permissions update successful"
+        return 0
+    else
+        log_error "✗ Permissions update failed"
+        return 1
+    fi
+}
+
+show_single_dataset_info() {
+    local json_file="$1"
+    local operation="$2"
+
+    log_info "=== Processing Target Information ==="
+    log_info "File: $json_file"
+
+    local dataset_id dataset_name
+    dataset_id=$(jq -r '.DataSet.DataSetId // "N/A"' "$json_file" 2>/dev/null)
+    dataset_name=$(jq -r '.DataSet.Name // "N/A"' "$json_file" 2>/dev/null)
+
+    log_debug "Dataset ID: $dataset_id"
+    log_debug "Dataset Name: $dataset_name"
+    log_debug "Operation to execute: $operation"
+}
+
+show_multiple_datasets_info() {
+    local target_dir="$1"
+    local operation="$2"
+    shift 2
+    local json_files=("$@")
+
+    log_info "=== Batch Processing Target Information ==="
+    log_info "Target Directory: $target_dir"
+    log_debug "Operation to execute: $operation"
+    log_info "Number of files to process: ${#json_files[@]}"
+
+    log_info "Processing target list:"
+    local count=1
+    for json_file in "${json_files[@]}"; do
+        local dataset_id dataset_name
+        dataset_id=$(jq -r '.DataSet.DataSetId // "N/A"' "$json_file" 2>/dev/null)
+        dataset_name=$(jq -r '.DataSet.Name // "N/A"' "$json_file" 2>/dev/null)
+
+        printf "%2d. %s\n" "$count" "$(basename "$json_file")"
+        log_debug "    ID: $dataset_id"
+        log_debug "    Name: $dataset_name"
+        echo
+        ((count++))
+    done
+}
+
+process_dataset_json() {
+    local json_file="$1"
+    local operation="$2"  # create|update|upsert
+    local dry_run="$3"
+    local update_permissions_flag="$4"
+    local skip_confirmation="$5"
+
+    if [ ! -f "$json_file" ]; then
+        log_error "File not found: $json_file"
+        return 1
+    fi
+
+    if [ "$skip_confirmation" != "true" ]; then
+        show_single_dataset_info "$json_file" "$operation"
+        if [ "$dry_run" != "true" ]; then
+            if ! confirm_action "Will execute $operation operation on the above dataset."; then
+                return 1
+            fi
+        fi
+    fi
+
+    log_info "=== Dataset Processing Started: $(basename "$json_file") ==="
+
+    local temp_dir
+    temp_dir=$(mktemp -d)
+    trap 'rm -rf "$temp_dir"' EXIT
+
+    local params_file
+    if ! params_file=$(extract_dataset_params "$json_file" "$temp_dir"); then
+        log_error "Failed to extract parameters"
+        return 1
+    fi
+
+    local dataset_id dataset_name
+    dataset_id=$(jq -r '.DataSetId' "$params_file")
+    dataset_name=$(jq -r '.Name' "$params_file")
+
+    if [ -z "$dataset_id" ] || [ "$dataset_id" = "null" ]; then
+        log_error "DataSetId not found"
+        return 1
+    fi
+
+    log_debug "Target dataset: $dataset_name (ID: $dataset_id)"
+
+    local actual_operation="$operation"
+    if [ "$operation" = "upsert" ]; then
+        if check_dataset_exists "$dataset_id"; then
+            actual_operation="update"
+            log_warn "Existing dataset detected, switching to update mode"
+        else
+            actual_operation="create"
+            log_warn "New dataset, switching to create mode"
+        fi
+    fi
+
+    case $actual_operation in
+        create)
+            if check_dataset_exists "$dataset_id"; then
+                log_error "Dataset already exists: $dataset_id"
+                log_warn "Use --operation update to update it"
+                return 1
+            fi
+            create_dataset "$params_file" "$dry_run"
+            ;;
+        update)
+            if ! check_dataset_exists "$dataset_id"; then
+                log_error "Dataset does not exist: $dataset_id"
+                log_warn "Use --operation create to create it"
+                return 1
+            fi
+            update_dataset "$params_file" "$dry_run"
+            ;;
+        *)
+            log_error "Unknown operation: $actual_operation"
+            return 1
+            ;;
+    esac
+
+    local main_result=$?
+
+    if [ $main_result -eq 0 ] && [ "$update_permissions_flag" = "true" ]; then
+        local permissions_file
+        permissions_file=$(dirname "$json_file")/../permissions/$(basename "$json_file" .json)-permissions.json
+        update_dataset_permissions "$dataset_id" "$permissions_file" "$dry_run"
+    fi
+
+    if [ $main_result -eq 0 ]; then
+        log_info "=== Processing Complete: Success ==="
+    else
+        log_error "=== Processing Complete: Error ==="
+    fi
+
+    return $main_result
+}
+
+process_multiple_datasets() {
+    local target_dir="$1"
+    local operation="$2"
+    local dry_run="$3"
+    local update_permissions_flag="$4"
+
+    local json_files=()
+    while IFS= read -r -d '' file; do
+        if [[ "$file" != *"-permissions.json" ]]; then
+            json_files+=("$file")
+        fi
+    done < <(find "$target_dir" -name "*.json" -print0 2>/dev/null)
+
+    if [ ${#json_files[@]} -eq 0 ]; then
+        log_error "No JSON files found"
+        return 1
+    fi
+
+    show_multiple_datasets_info "$target_dir" "$operation" "${json_files[@]}"
+
+    if [ "$dry_run" != "true" ]; then
+        if ! confirm_action "Will batch execute $operation operation on the above ${#json_files[@]} datasets."; then
+            return 1
+        fi
+    fi
+
+    log_info "=== Batch Processing of Multiple Datasets Started ==="
+
+    local success_count=0
+    local error_count=0
+
+    for json_file in "${json_files[@]}"; do
+        echo
+        if process_dataset_json "$json_file" "$operation" "$dry_run" "$update_permissions_flag" "true"; then
+            ((success_count++))
+        else
+            ((error_count++))
+        fi
+    done
+
+    echo
+    log_info "=== Batch Processing Complete ==="
+    log_info "Successful: $success_count items"
+    [ $error_count -gt 0 ] && log_error "Errors: $error_count items"
+
+    return $error_count
+}
